@@ -15,12 +15,13 @@ def predict_all_person():
     # TODO
     pass
 
-
+# predi
 def predict_single_person():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"using device: {device}")
-
+    #翻转图片，提高精度
     flip_test = True
+    #输入图片大小
     resize_hw = (256, 192)
     img_path = "./person.png"
     weights_path = "./pose_hrnet_w32_256x192.pth"
@@ -41,7 +42,8 @@ def predict_single_person():
 
     # read single-person image
     img = cv2.imread(img_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)#convert to RGB
+    # record original image size
     img_tensor, target = data_transform(img, {"box": [0, 0, img.shape[1] - 1, img.shape[0] - 1]})
     img_tensor = torch.unsqueeze(img_tensor, dim=0)
 
@@ -72,6 +74,7 @@ def predict_single_person():
         keypoints = np.squeeze(keypoints)
         scores = np.squeeze(scores)
 
+        #plot keypoints position
         plot_img = draw_keypoints(img, keypoints, scores, thresh=0.2, r=3)
         plt.imshow(plot_img)
         plt.show()

@@ -2,7 +2,7 @@ import torch.nn as nn
 
 BN_MOMENTUM = 0.1
 
-
+# 用于构建stage的block
 class BasicBlock(nn.Module):
     expansion = 1
 
@@ -15,7 +15,7 @@ class BasicBlock(nn.Module):
         self.bn2 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
         self.downsample = downsample
         self.stride = stride
-
+#这里的forward函数是用来构建block的
     def forward(self, x):
         residual = x
 
@@ -125,14 +125,16 @@ class StageModule(nn.Module):
                     for k in range(i - j - 1):
                         ops.append(
                             nn.Sequential(
+                                #进行下采样，经过这个循环构建出红色的CONV结构
                                 nn.Conv2d(c * (2 ** j), c * (2 ** j), kernel_size=3, stride=2, padding=1, bias=False),
                                 nn.BatchNorm2d(c * (2 ** j), momentum=BN_MOMENTUM),
                                 nn.ReLU(inplace=True)
                             )
                         )
-                    # 最后一个卷积层不仅要调整通道，还要进行下采样
+                    # 最后一个卷积层不仅要调整通道，还要进行下采样，构建橙色的卷积部分
                     ops.append(
                         nn.Sequential(
+                            #构建下采样，调整通道个数
                             nn.Conv2d(c * (2 ** j), c * (2 ** i), kernel_size=3, stride=2, padding=1, bias=False),
                             nn.BatchNorm2d(c * (2 ** i), momentum=BN_MOMENTUM)
                         )
@@ -147,16 +149,20 @@ class StageModule(nn.Module):
 
         # 接着融合不同尺寸信息
         x_fused = []
+        #i是输出分支的索引，j是输入分支的索引
+        #i=j,不做任何处理，i<j,对输入分支j进行通道调整以及上采样，方便后续相加;
+        # i>j,对输入分支j进行通道调整以及下采样，方便后续相加
         for i in range(len(self.fuse_layers)):
             x_fused.append(
                 self.relu(
+                    #对每个分支进行融合
                     sum([self.fuse_layers[i][j](x[j]) for j in range(len(self.branches))])
                 )
             )
 
         return x_fused
 
-
+#num_joints,表示关节点个数
 class HighResolutionNet(nn.Module):
     def __init__(self, base_channel: int = 32, num_joints: int = 17):
         super().__init__()
@@ -172,13 +178,16 @@ class HighResolutionNet(nn.Module):
             nn.Conv2d(64, 256, kernel_size=1, stride=1, bias=False),
             nn.BatchNorm2d(256, momentum=BN_MOMENTUM)
         )
+        #layer1用来调整通道数
         self.layer1 = nn.Sequential(
             Bottleneck(64, 64, downsample=downsample),
             Bottleneck(256, 64),
             Bottleneck(256, 64),
             Bottleneck(256, 64)
         )
-
+        #第一个分支上的conv不会改变特征图高宽
+        #第二个分支上的conv会将特征图高宽减半
+        #每新增一个分支，通道个数都会是上一个分支的两倍
         self.transition1 = nn.ModuleList([
             nn.Sequential(
                 nn.Conv2d(256, base_channel, kernel_size=3, stride=1, padding=1, bias=False),
@@ -239,10 +248,11 @@ class HighResolutionNet(nn.Module):
         self.stage4 = nn.Sequential(
             StageModule(input_branches=4, output_branches=4, c=base_channel),
             StageModule(input_branches=4, output_branches=4, c=base_channel),
+            #将四个输入分支进行融合，输出一个分支
             StageModule(input_branches=4, output_branches=1, c=base_channel)
         )
 
-        # Final layer
+        # Final layer，通道个数要与num_joints一致
         self.final_layer = nn.Conv2d(base_channel, num_joints, kernel_size=1, stride=1)
 
     def forward(self, x):
@@ -272,7 +282,7 @@ class HighResolutionNet(nn.Module):
         ]  # New branch derives from the "upper" branch only
 
         x = self.stage4(x)
-
+        #由于最后一层只输出一个分支，所以这里只取最后一个分支x[0]
         x = self.final_layer(x[0])
 
         return x

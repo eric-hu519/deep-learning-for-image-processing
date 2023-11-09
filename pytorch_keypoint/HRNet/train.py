@@ -13,6 +13,7 @@ from train_utils import train_eval_utils as utils
 
 
 def create_model(num_joints, load_pretrain_weights=True):
+    #base_channel=32 means HRnet-w32
     model = HighResolutionNet(base_channel=32, num_joints=num_joints)
     
     if load_pretrain_weights:
@@ -21,7 +22,7 @@ def create_model(num_joints, load_pretrain_weights=True):
         weights_dict = torch.load("./hrnet_w32.pth", map_location='cpu')
 
         for k in list(weights_dict.keys()):
-            # 如果载入的是imagenet权重，就删除无用权重
+            # 如果载入的是imagenet权重，就删除无用权重，关键点检测不需要全连接层
             if ("head" in k) or ("fc" in k):
                 del weights_dict[k]
 
@@ -46,14 +47,18 @@ def main(args):
 
     with open(args.keypoints_path, "r") as f:
         person_kps_info = json.load(f)
-
+    #get image size info
     fixed_size = args.fixed_size
+    #get heatmap size info(which is 1/4 of image size) 
     heatmap_hw = (args.fixed_size[0] // 4, args.fixed_size[1] // 4)
     kps_weights = np.array(person_kps_info["kps_weights"],
                            dtype=np.float32).reshape((args.num_joints,))
     data_transform = {
         "train": transforms.Compose([
+            #randomly crop a person from the image
+            #according to upper body index and lower body index in annotation
             transforms.HalfBody(0.3, person_kps_info["upper_body_ids"], person_kps_info["lower_body_ids"]),
+            #randomly resize and rotate input image
             transforms.AffineTransform(scale=(0.65, 1.35), rotation=(-45, 45), fixed_size=fixed_size),
             transforms.RandomHorizontalFlip(0.5, person_kps_info["flip_pairs"]),
             transforms.KeypointToHeatMap(heatmap_hw=heatmap_hw, gaussian_sigma=2, keypoints_weights=kps_weights),
@@ -84,7 +89,7 @@ def main(args):
                                         pin_memory=True,
                                         num_workers=nw,
                                         collate_fn=train_dataset.collate_fn)
-
+    #instance dataset
     # load validation data set
     # coco2017 -> annotations -> person_keypoints_val2017.json
     val_dataset = CocoKeypoint(data_root, "val", transforms=data_transform["val"], fixed_size=args.fixed_size,
@@ -104,6 +109,7 @@ def main(args):
 
     # define optimizer
     params = [p for p in model.parameters() if p.requires_grad]
+    #define adam as optimizer
     optimizer = torch.optim.AdamW(params,
                                   lr=args.lr,
                                   weight_decay=args.weight_decay)
@@ -130,6 +136,7 @@ def main(args):
 
     for epoch in range(args.start_epoch, args.epochs):
         # train for one epoch, printing every 50 iterations
+        #利用均方误差作为损失函数
         mean_loss, lr = utils.train_one_epoch(model, optimizer, train_data_loader,
                                               device=device, epoch=epoch,
                                               print_freq=50, warmup=True,
