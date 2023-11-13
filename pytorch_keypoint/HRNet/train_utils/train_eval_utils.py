@@ -68,9 +68,9 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
 
 
 @torch.no_grad()
-def evaluate(model, data_loader, device, flip=False, flip_pairs=None):
+def evaluate(model, data_loader, device, flip=False):
     if flip:
-        assert flip_pairs is not None, "enable flip must provide flip_pairs."
+        print("Warning: flip is enabled but flip_pairs is not provided.")
 
     model.eval()
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -89,7 +89,7 @@ def evaluate(model, data_loader, device, flip=False, flip_pairs=None):
         if flip:
             flipped_images = transforms.flip_images(images)
             flipped_outputs = model(flipped_images)
-            flipped_outputs = transforms.flip_back(flipped_outputs, flip_pairs)
+            flipped_outputs = transforms.flip_back(flipped_outputs)
             # feature is not aligned, shift flipped heatmap for higher accuracy
             # https://github.com/leoxiaobin/deep-high-resolution-net.pytorch/issues/22
             flipped_outputs[..., 1:] = flipped_outputs.clone()[..., 0:-1]

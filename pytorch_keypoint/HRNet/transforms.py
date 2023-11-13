@@ -19,11 +19,6 @@ def flip_back(output_flipped, matched_parts):
     assert len(output_flipped.shape) == 4, 'output_flipped has to be [batch_size, num_joints, height, width]'
     output_flipped = torch.flip(output_flipped, dims=[3])
 
-    for pair in matched_parts:
-        tmp = output_flipped[:, pair[0]].clone()
-        output_flipped[:, pair[0]] = output_flipped[:, pair[1]]
-        output_flipped[:, pair[1]] = tmp
-
     return output_flipped
 
 
@@ -338,10 +333,10 @@ class AffineTransform(object):
 
 class RandomHorizontalFlip(object):
     """随机对输入图片进行水平翻转，注意该方法必须接在 AffineTransform 后"""
-    def __init__(self, p: float = 0.5, matched_parts: list = None):
-        assert matched_parts is not None
+    def __init__(self, p: float = 0.5):
+        
         self.p = p
-        self.matched_parts = matched_parts
+        
 
     def __call__(self, image, target):
         if random.random() < self.p:
@@ -354,17 +349,21 @@ class RandomHorizontalFlip(object):
             # Flip horizontal
             keypoints[:, 0] = width - keypoints[:, 0] - 1
 
-            # Change left-right parts
-            for pair in self.matched_parts:
-                keypoints[pair[0], :], keypoints[pair[1], :] = \
-                    keypoints[pair[1], :], keypoints[pair[0], :].copy()
-
-                visible[pair[0]], visible[pair[1]] = \
-                    visible[pair[1]], visible[pair[0]].copy()
-
             target["keypoints"] = keypoints
             target["visible"] = visible
 
+        return image, target
+
+class RandomContrast(object):
+    """随机对输入的图像改变对比度"""
+    def __init__(self, p: float = 0.5, lower: float = 0.7, upper: float = 1.2):
+        self.p = p
+        self.lower = lower
+        self.upper = upper
+
+    def __call__(self, image, target):
+        if random.random() < self.p:
+            image = F.adjust_contrast(image, random.uniform(self.lower, self.upper))
         return image, target
 
 

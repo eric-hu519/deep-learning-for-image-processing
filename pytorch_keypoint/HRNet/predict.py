@@ -63,7 +63,7 @@ def predict_single_person():
         if flip_test:
             flip_tensor = transforms.flip_images(img_tensor)
             flip_outputs = torch.squeeze(
-                transforms.flip_back(model(flip_tensor.to(device)), person_info["flip_pairs"]),
+                transforms.flip_back(model(flip_tensor.to(device))),
             )
             # feature is not aligned, shift flipped heatmap for higher accuracy
             # https://github.com/leoxiaobin/deep-high-resolution-net.pytorch/issues/22

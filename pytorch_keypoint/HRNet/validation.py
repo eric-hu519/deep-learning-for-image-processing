@@ -155,7 +155,7 @@ def main(args):
             if args.flip:
                 flipped_images = transforms.flip_images(images)
                 flipped_outputs = model(flipped_images)
-                flipped_outputs = transforms.flip_back(flipped_outputs, person_coco_info["flip_pairs"])
+                flipped_outputs = transforms.flip_back(flipped_outputs)
                 # feature is not aligned, shift flipped heatmap for higher accuracy
                 # https://github.com/leoxiaobin/deep-high-resolution-net.pytorch/issues/22
                 flipped_outputs[..., 1:] = flipped_outputs.clone()[..., 0:-1]
