@@ -22,6 +22,9 @@ class my_converter:
         accuracy = 10 ** 6 
         keypoints = [] #init key points lists
         lables = []
+        #rename images by image_id
+        if self.rename_flag:
+            data = self.rename_img(data)
 
         for annotations in tqdm(data['annotations']):
         # filename = annotations["file_name"]
@@ -72,8 +75,8 @@ class my_converter:
             value[1] = int((value[1] / img_hight) * accuracy) / accuracy
             return value
     
-    def rename_img(self,img_folder,file_name,img_id):
-        cwd = os.getcwd()
-        os.chdir(img_folder)
-        os.rename(file_name,str(img_id)+".jpg")
-        os.chdir(cwd)#go back to the original work dir
+    def rename_img(self,data):
+        for img in tqdm(data['images']):
+                img_id = img["id"]
+                img["file_name"] = str(img_id)+".jpg"
+        return data

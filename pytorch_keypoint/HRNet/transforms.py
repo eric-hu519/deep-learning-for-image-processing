@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torchvision.transforms import functional as F
 import matplotlib.pyplot as plt
-
+from PIL import Image
 
 def flip_images(img):
     assert len(img.shape) == 4, 'images has to be [batch_size, channels, height, width]'
@@ -362,8 +362,10 @@ class RandomContrast(object):
         self.upper = upper
 
     def __call__(self, image, target):
+        image = Image.fromarray(image)
         if random.random() < self.p:
             image = F.adjust_contrast(image, random.uniform(self.lower, self.upper))
+            image = np.array(image)
         return image, target
 
 
@@ -375,7 +377,8 @@ class KeypointToHeatMap(object):
         self.heatmap_hw = heatmap_hw
         self.sigma = gaussian_sigma
         self.kernel_radius = self.sigma * 3
-        self.use_kps_weights = False if keypoints_weights is None else True
+        #self.use_kps_weights = False if keypoints_weights is None else True
+        self.use_kps_weights = False #dont need kpt weights for this task
         self.kps_weights = keypoints_weights
 
         # generate gaussian kernel(not normalized)
@@ -398,7 +401,7 @@ class KeypointToHeatMap(object):
             kps_weights = visible
 
         heatmap = np.zeros((num_kps, self.heatmap_hw[0], self.heatmap_hw[1]), dtype=np.float32)
-        heatmap_kps = (kps / 4 + 0.5).astype(np.int)  # round
+        heatmap_kps = (kps / 4 + 0.5).astype(int)  # round
         for kp_id in range(num_kps):
             v = kps_weights[kp_id]
             if v < 0.5:

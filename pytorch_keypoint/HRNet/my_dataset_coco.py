@@ -47,9 +47,9 @@ class CocoKeypoint(data.Dataset):
             anns = det.loadAnns(ann_ids)
             for ann in anns:
                 # only save person class
-                if ann["category_id"] != 1:#类别id不为1，跳过
-                    print(f'warning: find not support id: {ann["category_id"]}, only support id: 1 (person)')
-                    continue
+                #if ann["category_id"] != 1:#类别id不为1，跳过
+                    #print(f'warning: find not support id: {ann["category_id"]}, only support id: 1 (person)')
+                    #continue
 
                 # COCO_val2017_detections_AP_H_56_person.json文件中只有det信息，没有keypoint信息，跳过检查
                 if det_json_path is None:
@@ -91,7 +91,7 @@ class CocoKeypoint(data.Dataset):
 
         image = cv2.imread(target["image_path"])
         #转换颜色格式
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         if self.transforms is not None:
             #进行数据增强
             image, person_info = self.transforms(image, target)
@@ -109,7 +109,7 @@ class CocoKeypoint(data.Dataset):
 
 
 if __name__ == '__main__':
-    train = CocoKeypoint("/data/xrayimage/", dataset="train")#输入参数
+    train = CocoKeypoint("datasets", dataset="train")#输入参数
     print(len(train))
     t = train[0]
     print(t)

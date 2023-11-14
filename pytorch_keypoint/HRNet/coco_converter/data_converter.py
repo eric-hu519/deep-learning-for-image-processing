@@ -12,15 +12,15 @@ parser.add_argument('--json_path', default=r'annotations',
 type=str,
 help="input: coco format(json)")
 
-parser.add_argument('--save_path', default=r'convert_results', type=str,
+parser.add_argument('--save_path', default=r'datasets/annotations', type=str,
 help="specify where to save the output dir of labels")
-parser.add_argument('--json_type', default=r'xRayBone_val.json', type=str,
+parser.add_argument('--json_type', default=r'xRayBone_test.json', type=str,
 help="import train/val or test .json file?")
-parser.add_argument('--save_type',default=r'val',type=str,
+parser.add_argument('--save_type',default=r'test',type=str,
                     help="export train/val or test .txt file")
 parser.add_argument('--img_folder',default=r'images',
                     help="specify the folder for images")
-parser.add_argument('--rename_img',default=r'False',
+parser.add_argument('--rename_img',default=r'True',
                     help="need to rename the images according to id?")
 arg = parser.parse_args(args=[])
 

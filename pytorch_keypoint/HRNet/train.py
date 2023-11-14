@@ -26,10 +26,10 @@ def create_model(num_joints, load_pretrain_weights=True):
             if ("head" in k) or ("fc" in k):
                 del weights_dict[k]
 
-            # 如果载入的是coco权重，对比下num_joints，如果不相等就删除
-            if "final_layer" in k:
-                if weights_dict[k].shape[0] != num_joints:
-                    del weights_dict[k]
+            #如果载入的是coco权重，对比下num_joints，如果不相等就删除
+            #if "final_layer" in k:
+                #if weights_dict[k].shape[0] != num_joints:
+                    #del weights_dict[k]
 
         missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
         if len(missing_keys) != 0:
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     # 训练设备类型
     parser.add_argument('--device', default='cuda:0', help='device')
     # 训练数据集的根目录(coco2017)
-    parser.add_argument('--data-path', default='/datasets', help='dataset')
+    parser.add_argument('--data-path', default='datasets', help='dataset')
     # COCO数据集人体关键点信息
     parser.add_argument('--keypoints-path', default="./spinopelvic_keypoints.json", type=str,
                         help='person_keypoints.json path')
