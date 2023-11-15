@@ -377,8 +377,8 @@ class KeypointToHeatMap(object):
         self.heatmap_hw = heatmap_hw
         self.sigma = gaussian_sigma
         self.kernel_radius = self.sigma * 3
-        #self.use_kps_weights = False if keypoints_weights is None else True
-        self.use_kps_weights = False #dont need kpt weights for this task
+        self.use_kps_weights = False if keypoints_weights is None else True
+        #self.use_kps_weights = Falsle #dont need kpt weights for this task
         self.kps_weights = keypoints_weights
 
         # generate gaussian kernel(not normalized)

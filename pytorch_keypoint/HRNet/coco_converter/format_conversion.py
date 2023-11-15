@@ -4,12 +4,13 @@ import json
 from tqdm import tqdm
 
 class my_converter:
-    def __init__(self,file_path,save_type,ana_txt_save_path,img_folder,rename_flag):
+    def __init__(self,file_path,save_type,ana_txt_save_path,img_folder,rename_flag,display_flag):
         self.file_path = file_path
         self.save_type = save_type
         self.ana_txt_save_path = ana_txt_save_path
         self.img_folder = img_folder
         self.rename_flag = rename_flag
+        self.display_flag = display_flag
     def converter(self):
         data = json.load(open(self.file_path, 'r'))
         if not os.path.exists(self.ana_txt_save_path):
@@ -20,8 +21,8 @@ class my_converter:
         anno_count = 0 #count for same image annotations
         last_img_id = -1 #init img counting, make sure entering the loop
         accuracy = 10 ** 6 
-        keypoints = [] #init key points lists
-        lables = []
+        final_annotations = {}
+        
         #rename images by image_id
         if self.rename_flag:
             data = self.rename_img(data)
@@ -29,35 +30,44 @@ class my_converter:
         for annotations in tqdm(data['annotations']):
         # filename = annotations["file_name"]
             #if  annotations["keypoints"] != None:
-            if anno_count == 0:
-                bbox = annotations["bbox"]
-                bbox_center = self.bbox_converter(bbox)
-                new_keypoints = bbox_center
-                annotations['keypoints'].extend(new_keypoints)
-                annotations['num_keypoints'] = 2
-                anno_count += 1
-            elif anno_count == 1:
-                bbox = annotations["bbox"]
-                bbox_center = self.bbox_converter(bbox)
-                new_keypoints = bbox_center
-                if 'keypoints' not in annotations:
-                    annotations['keypoints'] = []
-                    annotations['num_keypoints'] = 1
-                    annotations['keypoints'].extend(new_keypoints)
+            if last_img_id != annotations["image_id"]:#if new image
+                if anno_count == 0:
+                    bbox = [annotations["bbox"]]
+                    bbox_center = self.bbox_converter(annotations["bbox"])
+                    new_keypoints = bbox_center
+                    keypoints = annotations['keypoints']
+                    keypoints.extend(new_keypoints)#extend keypoints
                     anno_count += 1
-            elif anno_count == 2 :
-                bbox = annotations["bbox"]
-                bbox_center = self.bbox_converter(bbox)
-                new_keypoints = bbox_center
-                if 'keypoints' not in annotations:
-                    annotations['keypoints'] = []
-                    annotations['num_keypoints'] = 1
-                    annotations['keypoints'].extend(new_keypoints)
-                anno_count = 0#reset count
-        with open(os.path.join(self.ana_txt_save_path,self.save_type+"_converted"".json"),'w') as f_txt:
-            json.dump(data,f_txt)
+                elif anno_count == 1:
+                    bbox.extend([annotations["bbox"]]) # extend bbox
+                    bbox_center = self.bbox_converter(annotations["bbox"])
+                    new_keypoints = bbox_center
+                    keypoints.extend(new_keypoints)
+                    anno_count += 1
+                elif anno_count == 2 :
+                    bbox.extend([annotations["bbox"]])
+                    bbox_center = self.bbox_converter(annotations["bbox"])
+                    new_keypoints = bbox_center
+                    keypoints.extend(new_keypoints)
+                    #rewrite annotations
+                    annotations['keypoints'] = keypoints
+                    annotations['bbox'] = self.merge_bbox(bbox)
+                    annotations['num_keypoints'] = 4
+                    annotations['category_id'] = 1
+                    annotations['id'] = annotations["image_id"]
+                    annotations['area'] = annotations['bbox'][2]*annotations['bbox'][3]
+                    final_annotations[annotations["image_id"]] = annotations
                     
-                
+                    anno_count = 0#reset count
+
+        final_annotations = list(final_annotations.values())
+        data['annotations'] = final_annotations
+        with open(os.path.join(self.ana_txt_save_path,self.save_type+"_converted"".json"),'w') as f:
+            json.dump(data,f)
+                    
+        if self.display_flag:
+            self.annocheck(data)
+        print("Done!\n")
 
         
     def bbox_converter(self,bbox):
@@ -80,3 +90,36 @@ class my_converter:
                 img_id = img["id"]
                 img["file_name"] = str(img_id)+".jpg"
         return data
+    def merge_bbox(self,bboxes):
+        min_x = min(bbox[0] for bbox in bboxes)
+        min_y = min(bbox[1] for bbox in bboxes)
+        max_x = max(bbox[0] + bbox[2] for bbox in bboxes)
+        max_y = max(bbox[1] + bbox[3] for bbox in bboxes)
+
+        merged_bbox = [min_x, min_y, max_x - min_x, max_y - min_y]
+        return merged_bbox
+    #randomly choose a image to display the annotations
+    def annocheck(self,data):
+        import cv2
+        import random
+        import matplotlib.pyplot as plt
+        img = random.choice(data['images'])
+        img_id = img["id"]
+        img_name = img["file_name"]
+        img_path = os.path.join(self.save_type,self.img_folder,img_name)
+        img = cv2.imread(img_path)
+        for anno in data['annotations']:
+            if anno['image_id'] == img_id:
+                bbox = anno['bbox']
+                keypoints = anno['keypoints']
+                for i in range(0,len(keypoints),3):
+                    if keypoints[i+2] == 2:
+                        cv2.circle(img,(int(keypoints[i]),int(keypoints[i+1])),3,(0,0,255),-1)
+                    elif keypoints[i+2] == 1:
+                        cv2.circle(img,(int(keypoints[i]),int(keypoints[i+1])),3,(0,255,0),-1)
+                    else:
+                        cv2.circle(img,(int(keypoints[i]),int(keypoints[i+1])),3,(255,0,0),-1)
+                cv2.rectangle(img,(int(bbox[0]),int(bbox[1])),(int(bbox[0]+bbox[2]),int(bbox[1]+bbox[3])),(255,255,0),2)
+        cv2.imshow("img",img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()

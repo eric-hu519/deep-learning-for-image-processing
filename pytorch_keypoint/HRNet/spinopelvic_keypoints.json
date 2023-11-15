@@ -2,5 +2,5 @@
     "keypoints": ["s1","s2","fh1","fh2"],
     "kps_weights": [1.0, 1.0, 1.0, 1.0],
     "upper_body_ids": [0, 1],
-    "lower_body_ids": [2,2]
+    "lower_body_ids": [2,3]
 }
