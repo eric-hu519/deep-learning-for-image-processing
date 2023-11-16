@@ -187,7 +187,7 @@ if __name__ == "__main__":
     parser.add_argument('--flip', type=bool, default=True, help='whether using flipped images')
 
     # 数据集的根目录
-    parser.add_argument('--data-path', default='/data/coco2017', help='dataset root')
+    parser.add_argument('--data-path', default='datasets', help='dataset root')
 
     # 训练好的权重文件
     parser.add_argument('--weights-path', default='./pose_hrnet_w32_256x192.pth', type=str, help='training weights')
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     # 类别索引和类别名称对应关系
     parser.add_argument('--label-json-path', type=str, default="person_keypoints.json")
     # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None
-    parser.add_argument('--person-det', type=str, default="./COCO_val2017_detections_AP_H_56_person.json")
+    parser.add_argument('--person-det', type=str, default=None)
 
     args = parser.parse_args()
 

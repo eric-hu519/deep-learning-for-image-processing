@@ -15,7 +15,7 @@ def flip_images(img):
     return img
 
 
-def flip_back(output_flipped, matched_parts):
+def flip_back(output_flipped):
     assert len(output_flipped.shape) == 4, 'output_flipped has to be [batch_size, num_joints, height, width]'
     output_flipped = torch.flip(output_flipped, dims=[3])
 
@@ -89,7 +89,7 @@ def get_final_preds(batch_heatmaps: torch.Tensor,
     return preds, maxvals.cpu().numpy()
 
 
-def decode_keypoints(outputs, origin_hw, num_joints: int = 17):
+def decode_keypoints(outputs, origin_hw, num_joints: int = 4):
     keypoints = []
     scores = []
     heatmap_h, heatmap_w = outputs.shape[-2:]

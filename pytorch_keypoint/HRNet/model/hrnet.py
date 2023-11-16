@@ -164,7 +164,7 @@ class StageModule(nn.Module):
 
 #num_joints,表示关节点个数
 class HighResolutionNet(nn.Module):
-    def __init__(self, base_channel: int = 32, num_joints: int = 17):
+    def __init__(self, base_channel: int = 32, num_joints: int = 4):
         super().__init__()
         # Stem
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)

@@ -222,7 +222,7 @@ if __name__ == "__main__":
     parser.add_argument('--person-det', type=str, default=None)
     parser.add_argument('--fixed-size', default=[256, 192], nargs='+', type=int, help='input size')
     # 检测目标类别数(不包含背景)
-    parser.add_argument('--num-joints', default=17, type=int, help='num_joints(num_keypoints)')
+    parser.add_argument('--num-joints', default=4, type=int, help='num_joints(num_keypoints)')
     # 每块GPU上的batch_size
     parser.add_argument('-b', '--batch-size', default=32, type=int,
                         help='images per gpu, the total batch size is $NGPU x batch_size')
