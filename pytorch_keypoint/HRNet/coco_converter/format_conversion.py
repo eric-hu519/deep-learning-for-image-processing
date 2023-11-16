@@ -4,7 +4,7 @@ import json
 from tqdm import tqdm
 
 class my_converter:
-    def __init__(self,file_path,save_type,ana_txt_save_path,img_folder,rename_flag,display_flag):
+    def __init__(self,file_path,save_type,ana_txt_save_path,img_folder,rename_flag,display_flag = False):
         self.file_path = file_path
         self.save_type = save_type
         self.ana_txt_save_path = ana_txt_save_path
@@ -22,10 +22,19 @@ class my_converter:
         last_img_id = -1 #init img counting, make sure entering the loop
         accuracy = 10 ** 6 
         final_annotations = {}
-        
+        final_category = {}
         #rename images by image_id
         if self.rename_flag:
             data = self.rename_img(data)
+
+        #get the first category in data['categories']
+        category = data['categories'][0]
+        #change category
+        category['name'] = 'spineopelvic'
+        category['id'] = 1
+        category['keypoints'] = ["pelvis","l_hip","r_hip","spine"]
+        final_category[category['id']] = category
+
 
         for annotations in tqdm(data['annotations']):
         # filename = annotations["file_name"]
@@ -62,6 +71,7 @@ class my_converter:
 
         final_annotations = list(final_annotations.values())
         data['annotations'] = final_annotations
+        data['categories'] = list(final_category.values())
         with open(os.path.join(self.ana_txt_save_path,self.save_type+"_converted"".json"),'w') as f:
             json.dump(data,f)
                     

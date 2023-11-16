@@ -190,13 +190,13 @@ if __name__ == "__main__":
     parser.add_argument('--data-path', default='datasets', help='dataset root')
 
     # 训练好的权重文件
-    parser.add_argument('--weights-path', default='./pose_hrnet_w32_256x192.pth', type=str, help='training weights')
+    parser.add_argument('--weights-path', default='./save_weights/model-209.pth', type=str, help='training weights')
 
     # batch size
     parser.add_argument('--batch-size', default=1, type=int, metavar='N',
                         help='batch size when validation.')
     # 类别索引和类别名称对应关系
-    parser.add_argument('--label-json-path', type=str, default="person_keypoints.json")
+    parser.add_argument('--label-json-path', type=str, default="spinopelvic_keypoints.json")
     # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None
     parser.add_argument('--person-det', type=str, default=None)
 

@@ -5,25 +5,9 @@ from PIL import ImageDraw, ImageFont
 from PIL.Image import Image
 
 # COCO 17 points
-point_name = ["nose", "left_eye", "right_eye",
-              "left_ear", "right_ear",
-              "left_shoulder", "right_shoulder",
-              "left_elbow", "right_elbow",
-              "left_wrist", "right_wrist",
-              "left_hip", "right_hip",
-              "left_knee", "right_knee",
-              "left_ankle", "right_ankle"]
+point_name = ["pelvis","l_hip","r_hip","spine"]
 
-point_color = [(240, 2, 127), (240, 2, 127), (240, 2, 127),
-               (240, 2, 127), (240, 2, 127),
-               (255, 255, 51), (255, 255, 51),
-               (254, 153, 41), (44, 127, 184),
-               (217, 95, 14), (0, 0, 255),
-               (255, 255, 51), (255, 255, 51), (228, 26, 28),
-               (49, 163, 84), (252, 176, 243), (0, 176, 240),
-               (255, 255, 0), (169, 209, 142),
-               (255, 255, 0), (169, 209, 142),
-               (255, 255, 0), (169, 209, 142)]
+point_color = [(240, 2, 127), (255, 255, 51), (44, 127, 184), (228, 26, 28)]
 
 
 def draw_keypoints(img: Image,
