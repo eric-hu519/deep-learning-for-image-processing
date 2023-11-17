@@ -37,6 +37,16 @@ def create_model(num_joints, load_pretrain_weights=True):
 
     return model
 
+#check loss list to save the best model
+def check_loss_list(loss_list, loss):
+    if len(loss_list) == 0:
+        return True
+    else:
+        if loss < min(loss_list):
+            return True
+        else:
+            return False
+
 
 def main(args):
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
@@ -168,8 +178,16 @@ def main(args):
             'lr_scheduler': lr_scheduler.state_dict(),
             'epoch': epoch}
         if args.amp:
-            save_files["scaler"] = scaler.state_dict()
-        torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
+            if check_loss_list(train_loss, train_loss[-1]):
+                save_files["scaler"] = scaler.state_dict()
+                best_model = save_files
+                #torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
+            if epoch == args.epochs - 1:
+                last_model = save_files
+
+    #save best model and last model
+    torch.save(best_model, "./save_weights/best_model.pth")
+    torch.save(last_model, "./save_weights/last_model.pth")
 
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
