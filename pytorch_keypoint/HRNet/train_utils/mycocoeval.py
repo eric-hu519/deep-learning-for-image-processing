@@ -147,7 +147,7 @@ class COCOeval:
         if p.iouType == 'segm' or p.iouType == 'bbox':
             computeIoU = self.computeIoU
         elif p.iouType == 'keypoints':
-            computeIoU = self.computeOks
+            computeIoU = self.computeOks #用computeOks来计算IoU
         self.ious = {(imgId, catId): computeIoU(imgId, catId) \
                         for imgId in p.imgIds
                         for catId in catIds}
@@ -168,13 +168,14 @@ class COCOeval:
         #print imgId and catId
         
         if p.useCats:
-            gt = self._gts[imgId,catId]
-            dt = self._dts[imgId,catId]
+            gt = self._gts[imgId,catId]#获取ground truth
+            dt = self._dts[imgId,catId]#获取detection
         else:
             gt = [_ for cId in p.catIds for _ in self._gts[imgId,cId]]
             dt = [_ for cId in p.catIds for _ in self._dts[imgId,cId]]
         if len(gt) == 0 and len(dt) ==0:
             return []
+        #对dt按照score进行排序
         inds = np.argsort([-d['score'] for d in dt], kind='mergesort')
         dt = [dt[i] for i in inds]
         if len(dt) > p.maxDets[-1]:
