@@ -171,6 +171,7 @@ def main(args):
 
         val_map.append(coco_info[1])  # @0.5 mAP
 
+        is_save = check_loss_list(train_loss, train_loss[-1])
         # save weights
         save_files = {
             'model': model.state_dict(),
@@ -178,12 +179,13 @@ def main(args):
             'lr_scheduler': lr_scheduler.state_dict(),
             'epoch': epoch}
         if args.amp:
-            if check_loss_list(train_loss, train_loss[-1]):
-                save_files["scaler"] = scaler.state_dict()
-                best_model = save_files
-                #torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
-            if epoch == args.epochs - 1:
-                last_model = save_files
+            save_files["scaler"] = scaler.state_dict()
+        if is_save:
+            
+            best_model = save_files
+            #torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
+        if epoch == args.epochs - 1:
+            last_model = save_files
 
     #save best model and last model
     torch.save(best_model, "./save_weights/best_model.pth")
@@ -225,7 +227,7 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=210, type=int, metavar='N',
+    parser.add_argument('--epochs', default=3, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-steps', default=[170, 200], nargs='+', type=int, help='decrease lr every step-size epochs')
@@ -244,7 +246,7 @@ if __name__ == "__main__":
                         help='batch size when training.')
     # 是否使用混合精度训练(需要GPU支持混合精度)
     parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
-
+    parser.add_argument("--savebest", default = 1, help="save best model")
     args = parser.parse_args()
     print(args)
 

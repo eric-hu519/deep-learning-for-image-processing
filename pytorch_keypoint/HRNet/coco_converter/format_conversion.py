@@ -109,27 +109,36 @@ class my_converter:
         merged_bbox = [min_x, min_y, max_x - min_x, max_y - min_y]
         return merged_bbox
     #randomly choose a image to display the annotations
-    def annocheck(self,data):
+    def annocheck(self, data):
         import cv2
         import random
         import matplotlib.pyplot as plt
+
         img = random.choice(data['images'])
         img_id = img["id"]
         img_name = img["file_name"]
-        img_path = os.path.join(self.save_type,self.img_folder,img_name)
+        img_path = os.path.join(self.save_type, self.img_folder, img_name)
         img = cv2.imread(img_path)
+
+        colors = [(0, 253, 79), (255, 0, 0), (0, 0, 255), (255, 255, 79)]  
+
         for anno in data['annotations']:
             if anno['image_id'] == img_id:
                 bbox = anno['bbox']
                 keypoints = anno['keypoints']
-                for i in range(0,len(keypoints),3):
-                    if keypoints[i+2] == 2:
-                        cv2.circle(img,(int(keypoints[i]),int(keypoints[i+1])),3,(0,0,255),-1)
-                    elif keypoints[i+2] == 1:
-                        cv2.circle(img,(int(keypoints[i]),int(keypoints[i+1])),3,(0,255,0),-1)
-                    else:
-                        cv2.circle(img,(int(keypoints[i]),int(keypoints[i+1])),3,(255,0,0),-1)
-                cv2.rectangle(img,(int(bbox[0]),int(bbox[1])),(int(bbox[0]+bbox[2]),int(bbox[1]+bbox[3])),(255,255,0),2)
-        cv2.imshow("img",img)
+
+                for i in range(0, len(keypoints), 3):
+                    x = int(keypoints[i])
+                    y = int(keypoints[i+1])
+                    visibility = keypoints[i+2]
+
+                    if visibility == 2:
+                        # Keypoint is visible
+                        color = colors[i // 3 % len(colors)]
+                        cv2.circle(img, (x, y), 3, color, -1)
+
+                cv2.rectangle(img, (int(bbox[0]), int(bbox[1])), (int(bbox[0]+bbox[2]), int(bbox[1]+bbox[3])), (255, 255, 0), 2)
+
+        cv2.imshow("img", img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()

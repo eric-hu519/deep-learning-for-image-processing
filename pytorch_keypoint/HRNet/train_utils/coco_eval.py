@@ -4,7 +4,8 @@ import copy
 from PIL import Image, ImageDraw
 import numpy as np
 from pycocotools.coco import COCO
-from mycocoeval import COCOeval
+#from pycocotools.cocoeval import COCOeval
+from .mycocoeval import COCOeval
 from .distributed_utils import all_gather, is_main_process
 from transforms import affine_points
 
