@@ -39,10 +39,10 @@ def create_model(num_joints, load_pretrain_weights=True):
 
 #check loss list to save the best model
 def check_loss_list(loss_list, loss):
-    if len(loss_list) == 0:
+    if len(loss_list) == (0 or 1):
         return True
     else:
-        if loss < min(loss_list):
+        if loss <= min(loss_list):
             return True
         else:
             return False
@@ -172,6 +172,7 @@ def main(args):
         val_map.append(coco_info[1])  # @0.5 mAP
 
         is_save = check_loss_list(train_loss, train_loss[-1])
+
         # save weights
         save_files = {
             'model': model.state_dict(),
@@ -188,8 +189,8 @@ def main(args):
             last_model = save_files
 
     #save best model and last model
-    torch.save(best_model, "./save_weights/best_model.pth")
-    torch.save(last_model, "./save_weights/last_model.pth")
+    torch.save(best_model, "./save_weights/best_model-{}.pth".format(epoch))
+    torch.save(last_model, "./save_weights/last_model-{}.pth".format(epoch))
 
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
@@ -227,7 +228,7 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=3, type=int, metavar='N',
+    parser.add_argument('--epochs', default=203, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-steps', default=[170, 200], nargs='+', type=int, help='decrease lr every step-size epochs')
