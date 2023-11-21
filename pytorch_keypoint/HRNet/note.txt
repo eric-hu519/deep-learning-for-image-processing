@@ -1,0 +1,10 @@
+        num_keypoints = len(sigmas)
+        fig, ax = plt.subplots(num_keypoints + 1, 1, figsize=(8, 6))
+        for i in range(num_keypoints):
+            ax[i].plot(errors[i])
+            ax[i].set_ylabel(f'Keypoint {i+1} Error')
+        ax[num_keypoints].plot(np.mean(errors, axis=0))
+        ax[num_keypoints].set_ylabel('Average Error')
+        ax[num_keypoints].set_xlabel('Detection Index')
+        plt.tight_layout()
+        plt.show()

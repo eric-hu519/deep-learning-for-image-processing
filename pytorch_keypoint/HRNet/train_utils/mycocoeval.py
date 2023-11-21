@@ -75,7 +75,8 @@ class COCOeval:
         self.params = Params(iouType=iouType) # parameters
         self._paramsEval = {}               # parameters for evaluation
         self.stats = []                     # result summarization
-        self.ious = {}                      # ious between all gts and dts
+        self.ious = {}  
+        self.error = []                    # ious between all gts and dts
         if not cocoGt is None:
             self.params.imgIds = sorted(cocoGt.getImgIds())
             self.params.catIds = sorted(cocoGt.getCatIds())
@@ -148,10 +149,11 @@ class COCOeval:
             computeIoU = self.computeIoU
         elif p.iouType == 'keypoints':
             computeIoU = self.computeOks #用computeOks来计算IoU
-        self.ious = {(imgId, catId): computeIoU(imgId, catId) \
-                        for imgId in p.imgIds
-                        for catId in catIds}
-
+        for imgId in p.imgIds:
+            for catId in catIds:
+                iou, err = computeIoU(imgId, catId)
+                self.ious[(imgId, catId)] = iou
+                self.error.append(err)
         evaluateImg = self.evaluateImg
         maxDet = p.maxDets[-1]
         self.evalImgs = [evaluateImg(imgId, catId, areaRng, maxDet)
@@ -210,33 +212,35 @@ class COCOeval:
         ious = np.zeros((len(dts), len(gts)))
         sigmas = p.kpt_oks_sigmas
         vars = (sigmas * 2)**2
-        k = len(sigmas)
+        k = len(sigmas)#numkeypoints
         # compute oks between each detection and ground truth object
         for j, gt in enumerate(gts):
-            # create bounds for ignore regions(double the gt bbox)
-            g = np.array(gt['keypoints'])
-            xg = g[0::3]; yg = g[1::3]; vg = g[2::3]
-            k1 = np.count_nonzero(vg > 0)
-            bb = gt['bbox']
-            x0 = bb[0] - bb[2]; x1 = bb[0] + bb[2] * 2
-            y0 = bb[1] - bb[3]; y1 = bb[1] + bb[3] * 2
-            for i, dt in enumerate(dts):
-                d = np.array(dt['keypoints'])
-                xd = d[0::3]; yd = d[1::3]
-                if k1>0:
-                    # measure the per-keypoint distance if keypoints visible
-                    dx = xd - xg
-                    dy = yd - yg
-                else:
-                    # measure minimum distance to keypoints in (x0,y0) & (x1,y1)
-                    z = np.zeros((k))
-                    dx = np.max((z, x0-xd),axis=0)+np.max((z, xd-x1),axis=0)
-                    dy = np.max((z, y0-yd),axis=0)+np.max((z, yd-y1),axis=0)
-                e = (dx**2 + dy**2) / vars / (gt['area']+np.spacing(1)) / 2
-                if k1 > 0:
-                    e=e[vg > 0]
-                ious[i, j] = np.sum(np.exp(-e)) / e.shape[0]
-        return ious
+                # create bounds for ignore regions(double the gt bbox)
+                g = np.array(gt['keypoints'])
+                xg = g[0::3]; yg = g[1::3]; vg = g[2::3]
+                k1 = np.count_nonzero(vg > 0)
+                bb = gt['bbox']
+                x0 = bb[0] - bb[2]; x1 = bb[0] + bb[2] * 2
+                y0 = bb[1] - bb[3]; y1 = bb[1] + bb[3] * 2
+                
+                for i, dt in enumerate(dts):
+                    d = np.array(dt['keypoints'])
+                    xd = d[0::3]; yd = d[1::3]
+                    if k1>0:
+                        # measure the per-keypoint distance if keypoints visible
+                        dx = xd - xg
+                        dy = yd - yg
+                    else:
+                        # measure minimum distance to keypoints in (x0,y0) & (x1,y1)
+                        z = np.zeros((k))
+                        dx = np.max((z, x0-xd),axis=0)+np.max((z, xd-x1),axis=0)
+                        dy = np.max((z, y0-yd),axis=0)+np.max((z, yd-y1),axis=0)
+                    e = (dx**2 + dy**2) / vars / (gt['area']+np.spacing(1)) / 2
+                    if k1 > 0:
+                        e=e[vg > 0]
+                    ious[i, j] = np.sum(np.exp(-e)) / e.shape[0]
+                    
+        return ious, e
 
     def evaluateImg(self, imgId, catId, aRng, maxDet):
         '''
