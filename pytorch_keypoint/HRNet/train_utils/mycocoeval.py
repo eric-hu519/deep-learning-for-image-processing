@@ -153,7 +153,7 @@ class COCOeval:
             for catId in catIds:
                 iou, err = computeIoU(imgId, catId)
                 self.ious[(imgId, catId)] = iou
-                self.error.append(err)
+                self.error.append(err)#获得每100张各图片的error
         evaluateImg = self.evaluateImg
         maxDet = p.maxDets[-1]
         self.evalImgs = [evaluateImg(imgId, catId, areaRng, maxDet)
@@ -228,6 +228,7 @@ class COCOeval:
                     xd = d[0::3]; yd = d[1::3]
                     if k1>0:
                         # measure the per-keypoint distance if keypoints visible
+                        #计算各可见关键点的x,y的误差
                         dx = xd - xg
                         dy = yd - yg
                     else:

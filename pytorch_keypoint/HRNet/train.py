@@ -161,8 +161,11 @@ def main(args):
         # evaluate on the test dataset
         coco_info = utils.evaluate(model, val_data_loader, device=device,
                                    flip=True)
-
-        # write into txt
+        #检查runs文件夹是否存在，若不存在则创建
+        if not os.path.exists("./runs"):
+            os.makedirs("./runs")
+        # 将实验结果写入txt，保存在runs文件夹下
+        results_file = "./runs/results.txt"  # 修改保存结果的文件路径为"./runs/results.txt"
         with open(results_file, "a") as f:
             # 写入的数据包括coco指标还有loss和learning rate
             result_info = [f"{i:.4f}" for i in coco_info + [mean_loss.item()]] + [f"{lr:.6f}"]
@@ -182,9 +185,8 @@ def main(args):
         if args.amp:
             save_files["scaler"] = scaler.state_dict()
         if is_save:
-            
             best_model = save_files
-            #torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
+            # torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
         if epoch == args.epochs - 1:
             last_model = save_files
 
@@ -228,10 +230,10 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=250, type=int, metavar='N',
+    parser.add_argument('--epochs', default=550, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-steps', default=[170, 200], nargs='+', type=int, help='decrease lr every step-size epochs')
+    parser.add_argument('--lr-steps', default=[250, 420], nargs='+', type=int, help='decrease lr every step-size epochs')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率
