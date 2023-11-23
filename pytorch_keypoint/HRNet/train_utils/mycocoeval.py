@@ -155,6 +155,9 @@ class COCOeval:
                 self.ious[(imgId, catId)] = iou
                 self.error.append(err)#获得每100张各图片的error
         evaluateImg = self.evaluateImg
+        #计算各点的平均误差值
+        self.error = np.array(self.error)
+        self.error = np.mean(self.error, axis=0)#按列求平均值
         maxDet = p.maxDets[-1]
         self.evalImgs = [evaluateImg(imgId, catId, areaRng, maxDet)
                  for catId in catIds
@@ -237,11 +240,12 @@ class COCOeval:
                         dx = np.max((z, x0-xd),axis=0)+np.max((z, xd-x1),axis=0)
                         dy = np.max((z, y0-yd),axis=0)+np.max((z, yd-y1),axis=0)
                     e = (dx**2 + dy**2) / vars / (gt['area']+np.spacing(1)) / 2
+                    abs_e = np.sqrt(dx**2 + dy**2)
                     if k1 > 0:
                         e=e[vg > 0]
                     ious[i, j] = np.sum(np.exp(-e)) / e.shape[0]
                     
-        return ious, e
+        return ious, abs_e
 
     def evaluateImg(self, imgId, catId, aRng, maxDet):
         '''
@@ -322,6 +326,8 @@ class COCOeval:
                 'gtIgnore':     gtIg,
                 'dtIgnore':     dtIg,
             }
+
+
 
     def accumulate(self, p = None):
         '''
@@ -482,7 +488,7 @@ class COCOeval:
             stats[11] = _summarize(0, areaRng='large', maxDets=self.params.maxDets[2])
             return stats
         def _summarizeKps():
-            stats = np.zeros((10,))
+            stats = np.zeros((14,))
             stats[0] = _summarize(1, maxDets=20)
             stats[1] = _summarize(1, maxDets=20, iouThr=.5)
             stats[2] = _summarize(1, maxDets=20, iouThr=.75)
@@ -493,6 +499,14 @@ class COCOeval:
             stats[7] = _summarize(0, maxDets=20, iouThr=.75)
             stats[8] = _summarize(0, maxDets=20, areaRng='medium')
             stats[9] = _summarize(0, maxDets=20, areaRng='large')
+            for i in range(10,14):
+                stats[i] = self.error[i-10]
+            print('mean abs error:\n',
+                   'SC= ', stats[10],'\n', 
+                   'S1= ',stats[11],'\n', 
+                   'F1C= ',stats[12],'\n',
+                   'F2C= ',stats[13])
+            self.error={}
             return stats
         if not self.eval:
             raise Exception('Please run accumulate() first')

@@ -144,6 +144,12 @@ def main(args):
     train_loss = []
     learning_rate = []
     val_map = []
+    sc_abs_error = []
+    s1_abs_error = []
+    fh1_abs_error = []
+    fh2_abs_error = []
+
+
 
     for epoch in range(args.start_epoch, args.epochs):
         # train for one epoch, printing every 50 iterations
@@ -173,6 +179,10 @@ def main(args):
             f.write(txt + "\n")
 
         val_map.append(coco_info[1])  # @0.5 mAP
+        s1_abs_error.append(coco_info[10])
+        sc_abs_error.append(coco_info[11])
+        fh1_abs_error.append(coco_info[12])
+        fh2_abs_error.append(coco_info[13])
 
         is_save = check_loss_list(train_loss, train_loss[-1])
 
@@ -203,8 +213,13 @@ def main(args):
     if len(val_map) != 0:
         from plot_curve import plot_map
         plot_map(val_map)
-
-
+    #plot abs error curve
+    if len(sc_abs_error) != 0:
+        from plot_curve import plot_abs_error
+        plot_abs_error(sc_abs_error,'sc')
+        plot_abs_error(s1_abs_error,'s1')
+        plot_abs_error(fh1_abs_error,'fh1')
+        plot_abs_error(fh2_abs_error,'fh2')
 if __name__ == "__main__":
     import argparse
 
@@ -220,7 +235,7 @@ if __name__ == "__main__":
                         help='person_keypoints.json path')
     # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
     parser.add_argument('--person-det', type=str, default=None)
-    parser.add_argument('--fixed-size', default=[256, 192], nargs='+', type=int, help='input size')
+    parser.add_argument('--fixed-size', default=[256, 256], nargs='+', type=int, help='input size')
     # keypoints点数
     parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
     # 文件保存地址
@@ -230,10 +245,10 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=3, type=int, metavar='N',
+    parser.add_argument('--epochs', default=250, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-steps', default=[250, 420], nargs='+', type=int, help='decrease lr every step-size epochs')
+    parser.add_argument('--lr-steps', default=[150, 200], nargs='+', type=int, help='decrease lr every step-size epochs')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率

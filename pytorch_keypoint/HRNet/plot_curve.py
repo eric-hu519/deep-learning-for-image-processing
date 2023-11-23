@@ -1,6 +1,7 @@
 import datetime
 import matplotlib.pyplot as plt
 import os
+import numpy as np
 
 
 def plot_loss_and_lr(train_loss, learning_rate):
@@ -49,5 +50,23 @@ def plot_map(mAP):
         plt.savefig('./runs/figs/mAP.png')
         plt.close()
         print("successful save mAP curve!")
+    except Exception as e:
+        print(e)
+
+def plot_abs_error(abs_error, err_name):
+    try:
+        x = list(range(len(abs_error)))
+        plt.plot(x, (np.log(abs_error) + np.spacing(1)), label='abs_error')
+        plt.xlabel('epoch')
+        plt.ylabel('abs_error')
+        plt.title('Eval abs_error')
+        plt.xlim(0, len(abs_error))
+        plt.legend(loc='best')
+                #判断runs文件夹是否存在，不存在则创建
+        if not os.path.exists('./runs/figs'):
+            os.mkdir('./runs/figs')
+        plt.savefig('./runs/figs/{}_abs_log_error.png'.format(err_name))
+        plt.close()
+        print("successful save {}_abs_log_error curve!".format(err_name))
     except Exception as e:
         print(e)
