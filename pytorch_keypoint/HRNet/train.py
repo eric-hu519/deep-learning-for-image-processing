@@ -224,19 +224,19 @@ def main(args):
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         from plot_curve import plot_loss_and_lr
-        plot_loss_and_lr(train_loss, learning_rate,args.log_path)
+        plot_loss_and_lr(train_loss, learning_rate,str(args.log_path))
 
     # plot mAP curve
     if len(val_map) != 0:
         from plot_curve import plot_map
-        plot_map(val_map,args.log_path)
+        plot_map(val_map,str(args.log_path))
     #plot abs error curve
     if len(sc_abs_error) != 0:
         from plot_curve import plot_abs_error
-        plot_abs_error(sc_abs_error,'sc',args.log_path)
-        plot_abs_error(s1_abs_error,'s1',args.log_path)
-        plot_abs_error(fh1_abs_error,'fh1',args.log_path)
-        plot_abs_error(fh2_abs_error,'fh2',args.log_path)
+        plot_abs_error(sc_abs_error,'sc',str(args.log_path))
+        plot_abs_error(s1_abs_error,'s1',str(args.log_path))
+        plot_abs_error(fh1_abs_error,'fh1',str(args.log_path))
+        plot_abs_error(fh2_abs_error,'fh2',str(args.log_path))
 if __name__ == "__main__":
     import argparse
 
@@ -265,7 +265,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-steps', default=[250, 350], nargs='+', type=int, help='decrease lr every step-size epochs')
+    parser.add_argument('--lr-steps', default=[350, 500], nargs='+', type=int, help='decrease lr every step-size epochs')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率

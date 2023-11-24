@@ -29,7 +29,7 @@ def plot_loss_and_lr(train_loss, learning_rate, path):
         path = path + '/figs/'
         if not os.path.exists(path):
             os.mkdir(path)
-        fig.savefig(path+'loss_and_lr{}.png'.format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S")))
+        fig.savefig('{}loss_and_lr{}.png'.format(path,datetime.datetime.now().strftime("%Y%m%d-%H%M%S")))
         plt.close()
         print("successful save loss curve! ")
     except Exception as e:
@@ -49,29 +49,37 @@ def plot_map(mAP,path):
                 #判断runs文件夹是否存在，不存在则创建
         if not os.path.exists(path):
             os.mkdir(path)
-        plt.savefig(path + 'mAP.png')
+        plt.savefig('{}mAP.png'.format(path))
         plt.close()
         print("successful save mAP curve!")
     except Exception as e:
         print(e)
 
+
 def plot_abs_error(abs_error, err_name, path):
     try:
         x = list(range(len(abs_error)))
-        plt.plot(x, (np.log(abs_error) + np.spacing(1)), label='abs_error')
-        plt.xlabel('epoch')
-        plt.ylabel('abs_error')
-        plt.title('Eval abs_error')
-        plt.xlim(0, len(abs_error))
-        plt.legend(loc='best')
-                #判断runs文件夹是否存在，不存在则创建
+        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        
+        ax[0].plot(x, (np.log(abs_error) + np.spacing(1)), label='log abs error')
+        ax[0].set_xlabel('epoch')
+        ax[0].set_ylabel('log abs error')
+        ax[0].set_title('Eval log abs_error')
+        ax[0].set_xlim(0, len(abs_error))
+        ax[0].legend(loc='best')
+
+        ax[1].plot(x, abs_error, label='abs error')
+        ax[1].set_xlabel('epoch')
+        ax[1].set_ylabel('abs error')
+        ax[1].set_title('Eval abs_error')
+        ax[1].set_xlim(0, len(abs_error))
+        ax[1].legend(loc='best')
+
+        fig.tight_layout()
         path = path + '/figs/'
         if not os.path.exists(path):
             os.mkdir(path)
-        
-        plt.savefig('{}{}_abs_log_error.png'.format(path,err_name))
-        
-        plt.savefig('{}{}_abs_error.png'.format(path,err_name))
+        fig.savefig('{}{}_abs_error.png'.format(path, err_name))
         plt.close()
         print("successful save {}_error curve!".format(err_name))
     except Exception as e:
