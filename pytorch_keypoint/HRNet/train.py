@@ -1,11 +1,12 @@
 import json
 import os
 import datetime
-
+from pathlib import Path
 import torch
 from torch.utils import data
 import numpy as np
-
+import re
+import glob
 import transforms
 from model import HighResolutionNet
 from my_dataset_coco import CocoKeypoint
@@ -46,6 +47,22 @@ def check_loss_list(loss_list, loss):
             return True
         else:
             return False
+
+def increment_path(path, exist_ok=False, sep='', mkdir=False):
+    # Increment file or directory path, i.e. runs/exp --> runs/exp{sep}2, runs/exp{sep}3, ... etc.
+    path = Path(path)  # os-agnostic
+    if path.exists() and not exist_ok:
+        suffix = path.suffix
+        path = path.with_suffix('')
+        dirs = glob.glob(f"{path}{sep}*")  # similar paths
+        matches = [re.search(rf"%s{sep}(\d+)" % path.stem, d) for d in dirs]
+        i = [int(m.groups()[0]) for m in matches if m]  # indices
+        n = max(i) + 1 if i else 2  # increment number
+        path = Path(f"{path}{sep}{n}{suffix}")  # update path
+    dir = path if path.suffix == '' else path.parent  # directory
+    if not dir.exists() and mkdir:
+        dir.mkdir(parents=True, exist_ok=True)  # make directory
+    return path
 
 
 def main(args):
@@ -168,10 +185,10 @@ def main(args):
         coco_info = utils.evaluate(model, val_data_loader, device=device,
                                    flip=True)
         #检查runs文件夹是否存在，若不存在则创建
-        if not os.path.exists("./runs"):
-            os.makedirs("./runs")
+        #if not os.path.exists("./runs"):
+        #    os.makedirs("./runs")
         # 将实验结果写入txt，保存在runs文件夹下
-        results_file = "./runs/results.txt"  # 修改保存结果的文件路径为"./runs/results.txt"
+        results_file = "{}/results.txt".format(args.log_path)  # 修改保存结果的文件路径为"./runs/results.txt"
         with open(results_file, "a") as f:
             # 写入的数据包括coco指标还有loss和learning rate
             result_info = [f"{i:.4f}" for i in coco_info + [mean_loss.item()]] + [f"{lr:.6f}"]
@@ -201,25 +218,25 @@ def main(args):
             last_model = save_files
 
     #save best model and last model
-    torch.save(best_model, "./save_weights/best_model-{}.pth".format(epoch))
-    torch.save(last_model, "./save_weights/last_model-{}.pth".format(epoch))
+    torch.save(best_model, "{}/best_model-{}.pth".format(args.output_dir ,epoch))
+    torch.save(last_model, "{}/last_model-{}.pth".format(args.output_dir,epoch))
 
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         from plot_curve import plot_loss_and_lr
-        plot_loss_and_lr(train_loss, learning_rate)
+        plot_loss_and_lr(train_loss, learning_rate,args.log_path)
 
     # plot mAP curve
     if len(val_map) != 0:
         from plot_curve import plot_map
-        plot_map(val_map)
+        plot_map(val_map,args.log_path)
     #plot abs error curve
     if len(sc_abs_error) != 0:
         from plot_curve import plot_abs_error
-        plot_abs_error(sc_abs_error,'sc')
-        plot_abs_error(s1_abs_error,'s1')
-        plot_abs_error(fh1_abs_error,'fh1')
-        plot_abs_error(fh2_abs_error,'fh2')
+        plot_abs_error(sc_abs_error,'sc',args.log_path)
+        plot_abs_error(s1_abs_error,'s1',args.log_path)
+        plot_abs_error(fh1_abs_error,'fh1',args.log_path)
+        plot_abs_error(fh2_abs_error,'fh2',args.log_path)
 if __name__ == "__main__":
     import argparse
 
@@ -239,16 +256,16 @@ if __name__ == "__main__":
     # keypoints点数
     parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
     # 文件保存地址
-    parser.add_argument('--output-dir', default='./save_weights', help='path where to save')
+    parser.add_argument('--output-dir', default='./save_weights/exp', help='path where to save')
     # 若需要接着上次训练，则指定上次训练保存权重文件地址
     parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=250, type=int, metavar='N',
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-steps', default=[150, 200], nargs='+', type=int, help='decrease lr every step-size epochs')
+    parser.add_argument('--lr-steps', default=[250, 350], nargs='+', type=int, help='decrease lr every step-size epochs')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率
@@ -265,11 +282,11 @@ if __name__ == "__main__":
     # 是否使用混合精度训练(需要GPU支持混合精度)
     parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
     parser.add_argument("--savebest", default = 1, help="save best model")
+    parser.add_argument("--log-path", default = "./runs/exp", help="log path")
     args = parser.parse_args()
     print(args)
 
     # 检查保存权重文件夹是否存在，不存在则创建
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-
+    args.output_dir = increment_path(Path(args.output_dir), exist_ok=False,mkdir=True)
+    args.log_path = increment_path(Path(args.log_path), exist_ok=False,mkdir=True)
     main(args)
