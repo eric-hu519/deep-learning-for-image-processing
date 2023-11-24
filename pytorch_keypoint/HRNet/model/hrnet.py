@@ -286,3 +286,94 @@ class HighResolutionNet(nn.Module):
         x = self.final_layer(x[0])
 
         return x
+
+import torch
+import torch.nn.functional as F
+
+class FFCA(nn.Module):
+    """
+    FFCA - Fusion Feature Channel Attention Module
+    """
+    def __init__(self, channel, reduction=16):
+        super(FFCA, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+
+        # Shared MLP (implemented using Conv1d for parameter sharing)
+        self.shared_mlp = nn.Sequential(
+            nn.Conv1d(channel, channel // reduction, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv1d(channel // reduction, channel, 1)
+        )
+
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        # x should be in the shape of (batch_size, channel, height, width)
+        batch, channel, _, _ = x.size()
+
+        # Average and Max Pooling
+        avg_pool = self.avg_pool(x).view(batch, channel, 1)  # shape: (batch, channel, 1)
+        max_pool = self.max_pool(x).view(batch, channel, 1)  # shape: (batch, channel, 1)
+
+        # Shared MLP for both pooling results
+        avg_out = self.shared_mlp(avg_pool)
+        max_out = self.shared_mlp(max_pool)
+
+        # Element-wise sum and activation
+        out = self.sigmoid(avg_out + max_out).view(batch, channel, 1, 1)
+
+        return out * x
+
+class Decoder(nn.Module):
+    """
+    Decoder with FFCA modules.
+    """
+    def __init__(self, channels):
+        super(Decoder, self).__init__()
+        self.ffca1 = FFCA(channels[0])
+        self.ffca2 = FFCA(channels[1])
+        self.ffca3 = FFCA(channels[2])
+        self.ffca4 = FFCA(channels[3])
+        
+        # Decoder layers
+        self.up1 = nn.ConvTranspose2d(channels[0], channels[1], 2, stride=2)
+        self.up2 = nn.ConvTranspose2d(channels[1], channels[2], 2, stride=2)
+        self.up3 = nn.ConvTranspose2d(channels[2], channels[3], 2, stride=2)
+        self.conv1 = nn.Conv2d(channels[1], channels[1], 3, padding=1)
+        self.conv2 = nn.Conv2d(channels[2], channels[2], 3, padding=1)
+        self.conv3 = nn.Conv2d(channels[3], channels[3], 3, padding=1)
+
+        # Final layer to output the center point heatmap and vector map
+        self.final_center = nn.Conv2d(channels[3], 1, 1)
+        self.final_vector = nn.Conv2d(channels[3], 2, 1)
+
+    def forward(self, x):
+        # Assuming x is the output of the encoder with skip connections
+        encoder_output, skip1, skip2, skip3 = x
+        
+        # Apply FFCA modules and upsample
+        up1 = self.up1(F.relu(self.ffca1(encoder_output)))
+        up2 = self.up2(F.relu(self.ffca2(self.conv1(up1 + skip1))))
+        up3 = self.up3(F.relu(self.ffca3(self.conv2(up2 + skip2))))
+        decoder_output = F.relu(self.ffca4(self.conv3(up3 + skip3)))
+
+        # Output layers
+        center_map = self.final_center(decoder_output)
+        vector_map = self.final_vector(decoder_output)
+
+        return center_map, vector_map
+
+# Example usage:
+# Instantiate the decoder module with the appropriate channel sizes
+# Here channels are assumed to be in the order of C4, C3, C2, C1 from the encoder
+decoder = Decoder(channels=[512, 256, 128, 64])
+
+# Example input tensor (batch size, channel, height, width)
+example_input = (torch.randn(1, 512, 64, 32), torch.randn(1, 256, 128, 64), torch.randn(1, 128, 256, 128), torch.randn(1, 64, 512, 256))
+
+# Forward pass through the decoder
+center_map, vector_map = decoder(example_input)
+
+print("Center map size:", center_map.size())
+print("Vector map size:", vector_map.size())
