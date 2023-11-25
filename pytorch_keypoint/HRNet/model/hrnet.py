@@ -249,9 +249,10 @@ class HighResolutionNet(nn.Module):
             StageModule(input_branches=4, output_branches=4, c=base_channel),
             StageModule(input_branches=4, output_branches=4, c=base_channel),
             #将四个输入分支进行融合，输出一个分支
-            StageModule(input_branches=4, output_branches=1, c=base_channel)
+            #StageModule(input_branches=4, output_branches=1, c=base_channel)
         )
-
+        self.decoder = Decoder(channels=[base_channel * 2 ** i for i in range(4)])
+        
         # Final layer，通道个数要与num_joints一致
         self.final_layer = nn.Conv2d(base_channel, num_joints, kernel_size=1, stride=1)
 
@@ -282,8 +283,9 @@ class HighResolutionNet(nn.Module):
         ]  # New branch derives from the "upper" branch only
 
         x = self.stage4(x)
+        x = self.decoder(x)
         #由于最后一层只输出一个分支，所以这里只取最后一个分支x[0]
-        x = self.final_layer(x[0])
+        #x = self.final_layer(x[0])
 
         return x
 
@@ -346,7 +348,7 @@ class Decoder(nn.Module):
 
         # Final layer to output the center point heatmap and vector map
         self.final_center = nn.Conv2d(channels[3], 1, 1)
-        self.final_vector = nn.Conv2d(channels[3], 2, 1)
+        #self.final_vector = nn.Conv2d(channels[3], 2, 1)
 
     def forward(self, x):
         # Assuming x is the output of the encoder with skip connections
@@ -360,20 +362,6 @@ class Decoder(nn.Module):
 
         # Output layers
         center_map = self.final_center(decoder_output)
-        vector_map = self.final_vector(decoder_output)
+        #vector_map = self.final_vector(decoder_output)
 
-        return center_map, vector_map
-
-# Example usage:
-# Instantiate the decoder module with the appropriate channel sizes
-# Here channels are assumed to be in the order of C4, C3, C2, C1 from the encoder
-decoder = Decoder(channels=[512, 256, 128, 64])
-
-# Example input tensor (batch size, channel, height, width)
-example_input = (torch.randn(1, 512, 64, 32), torch.randn(1, 256, 128, 64), torch.randn(1, 128, 256, 128), torch.randn(1, 64, 512, 256))
-
-# Forward pass through the decoder
-center_map, vector_map = decoder(example_input)
-
-print("Center map size:", center_map.size())
-print("Vector map size:", vector_map.size())
+        return center_map
