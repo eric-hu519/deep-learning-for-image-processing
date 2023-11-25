@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+import torch
 BN_MOMENTUM = 0.1
 
 # 用于构建stage的block
@@ -164,9 +164,10 @@ class StageModule(nn.Module):
 
 #num_joints,表示关节点个数
 class HighResolutionNet(nn.Module):
-    def __init__(self, base_channel: int = 32, num_joints: int = 4):
+    def __init__(self, base_channel: int = 32, num_joints: int = 4, with_FFCA = True):
         super().__init__()
         # Stem
+        self.with_FFCA = with_FFCA
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1, bias=False)
@@ -249,16 +250,20 @@ class HighResolutionNet(nn.Module):
         self.stage4 = nn.Sequential(
             StageModule(input_branches=4, output_branches=4, c=base_channel),
             StageModule(input_branches=4, output_branches=4, c=base_channel),
+            
             #将四个输入分支进行融合，输出一个分支
             #StageModule(input_branches=4, output_branches=1, c=base_channel)
         )
-        self.decoder = myDecoder()
+
+        if not with_FFCA:
+            self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel))
+        else:
+            self.decoder = myDecoder(base_channel)
         
         # Final layer，通道个数要与num_joints一致
         self.final_layer = nn.Conv2d(base_channel, num_joints, kernel_size=1, stride=1)
 
     def forward(self, x):
-        print("x.shape: ", x.shape,"\n")
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -285,113 +290,30 @@ class HighResolutionNet(nn.Module):
         ]  # New branch derives from the "upper" branch only
 
         x = self.stage4(x)
-        print("x[0]: ", x[0].shape, "\n", "x[1]: ", x[1].shape, "\n", "x[2]: ", x[2].shape, "\n", "x[3]: ", x[3].shape, "\n")
-        x = self.decoder(x)
+        #print("x[0]: ", x[0].shape, "\n", "x[1]: ", x[1].shape, "\n", "x[2]: ", x[2].shape, "\n", "x[3]: ", x[3].shape, "\n")
+        if self.with_FFCA:
+            x = self.decoder(x)
+            x = self.final_layer(x)
+        else:
         #由于最后一层只输出一个分支，所以这里只取最后一个分支x[0]
-        x = self.final_layer(x[0])
-        x = self.sigmoid(x)
+            x = self.final_layer(x[0])
+        #x = self.sigmoid(x)
 
         return x
 
-import torch
-import torch.nn.functional as F
-
-class FFCA(nn.Module):
-    """
-    FFCA - Fusion Feature Channel Attention Module
-    """
-    def __init__(self, channel, reduction=16):
-        super(FFCA, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.max_pool = nn.AdaptiveMaxPool2d(1)
-
-        # Shared MLP (implemented using Conv1d for parameter sharing)
-        self.shared_mlp = nn.Sequential(
-            nn.Conv1d(channel, channel // reduction, 1),
-            nn.ReLU(inplace=True),
-            nn.Conv1d(channel // reduction, channel, 1)
-        )
-
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        # x should be in the shape of (batch_size, channel, height, width)
-        batch, channel, _, _ = x.size()
-
-        # Average and Max Pooling
-        avg_pool = self.avg_pool(x).view(batch, channel, 1)  # shape: (batch, channel, 1)
-        max_pool = self.max_pool(x).view(batch, channel, 1)  # shape: (batch, channel, 1)
-
-        # Shared MLP for both pooling results
-        avg_out = self.shared_mlp(avg_pool)
-        max_out = self.shared_mlp(max_pool)
-
-        # Element-wise sum and activation
-        out = self.sigmoid(avg_out + max_out).view(batch, channel, 1, 1)
-
-        return out * x
-
-class Decoder(nn.Module):
-    """
-    Decoder with FFCA modules.
-    """
-    def __init__(self, channels):
-        super(Decoder, self).__init__()
-        self.ffca1 = FFCA(channels[3])
-        self.ffca2 = FFCA(channels[2])
-        self.ffca3 = FFCA(channels[1])
-        self.ffca4 = FFCA(channels[0])
-        
-        # Decoder layers
-        self.up1 = nn.ConvTranspose2d(channels[3], channels[2], 2, stride=2)
-        self.up2 = nn.ConvTranspose2d(channels[2], channels[1], 2, stride=2)
-        self.up3 = nn.ConvTranspose2d(channels[1], channels[0], 2, stride=2)
-        self.conv1 = nn.Conv2d(channels[2], channels[2], 3, padding=1)
-        self.conv2 = nn.Conv2d(channels[1], channels[1], 3, padding=1)
-        self.conv3 = nn.Conv2d(channels[0], channels[0], 3, padding=1)
-
-
-
-        # Final layer to output the center point heatmap and vector map
-        self.final_center = nn.Conv2d(channels[0], 1, 1)
-        #self.final_vector = nn.Conv2d(channels[3], 2, 1)
-
-    def forward(self, x):
-        # Assuming x is the output of the encoder with skip connections
-        #encoder_output, skip1, skip2, skip3 = x
-
-        branch3, branch2, branch1, branch0 = x #将四个分支的输出分别赋值给branch3, branch2, branch1, branch0，分别为高分辨率到低分辨率
-        
-
-        up_branch0 = self.upsample(branch0) #up_branch0 的 H与W应该与branch1的H与W相同
-        up_branch1 = self.upsample(branch1)
-        up_branch2 = self.upsample(branch2)
-        
-        # Apply FFCA modules and upsample
-        up1 = self.up1(F.relu(self.ffca1(branch0)))
-        up2 = self.up2(F.relu(self.ffca2(self.conv1(up1 + branch1))))
-        up3 = self.up3(F.relu(self.ffca3(self.conv2(up2 + branch2))))
-        decoder_output = F.relu(self.ffca4(self.conv3(up3 + branch3)))
-
-        # Output layers
-        center_map = self.final_center(decoder_output)
-        #vector_map = self.final_vector(decoder_output)
-
-        return center_map
 
 
 class myFFCA(nn.Module):
     """
     FFCA - Fusion Feature Channel Attention Module
     """
-    def __init__(self, low_branch,high_branch):#输入为低级分支的通道个数
+    def __init__(self, low_channel,high_channel):#输入为低级分支的通道个数
         super().__init__()
-        #low_branch size should be (batch_size, 2*channel, height/2, width/2)
-        
-        self.low_branch = low_branch
-        self.high_branch = high_branch
-        self.low_channle = low_branch.size(1)
-        self.high_channle = high_branch.size(1)
+        #low_branch size should be (batch_size, 2*high_channel, height/2, width/2)
+
+
+        self.low_channle = low_channel
+        self.high_channle = high_channel
         #process input branch
         self.inbranch_process = nn.Sequential(
             #upsample, make lowchannel's H,W double and equals to highchannel's H,W
@@ -410,10 +332,10 @@ class myFFCA(nn.Module):
             nn.Conv2d(self.low_channle, self.high_channle,3,padding=1),
             nn.ReLU(inplace=True)
         )
-    def forward(self):
-        up_lowbranch = self.inbranch_process(self.low_branch)
+    def forward(self, low_branch, high_branch):
+        up_lowbranch = self.inbranch_process(low_branch)
         #concatenate two branch
-        concat_branch = torch.cat((up_lowbranch, self.high_branch), 1)#channle*2
+        concat_branch = torch.cat((up_lowbranch, high_branch), 1)#channle*2
         maxpooled_branch = self.max_pool(concat_branch)
         avgpooled_branch = self.avg_pool(concat_branch)
 
@@ -426,9 +348,9 @@ class myFFCA(nn.Module):
         #restore the size of weight from[batch_size, channel] to [batch_size, channel, 1, 1]
         feature_weight = feature_weight.view(feature_weight.size(0), feature_weight.size(1), 1, 1)
 
-        weighted_branch = feature_weight * concat_branch
+        weighted_branch = feature_weight * up_lowbranch
 
-        output_branch = torch.cat((weighted_branch, self.high_branch), 1)#channle*2
+        output_branch = torch.cat((weighted_branch, high_branch), 1)#channle*2
 
         output_branch = self.output(output_branch)#half the channle
 
@@ -439,19 +361,19 @@ class myDecoder(nn.Module):
     """
     Decoder with FFCA modules.
     """
-    def __init__(self,low_branch,high_branch):
+    def __init__(self,basechannel):
         super().__init__()
-        #from lower ffca to higher ffca
-        self.ffca1 = myFFCA(low_branch,high_branch)
-        self.ffca2 = myFFCA(low_branch,high_branch)
-        self.ffca3 = myFFCA(low_branch,high_branch)
+        #from higher ffca to lower ffca
+        self.ffca3 = myFFCA(2*basechannel,basechannel)
+        self.ffca2 = myFFCA(4*basechannel,2*basechannel)
+        self.ffca1 = myFFCA(8*basechannel,4*basechannel)
         
     def forward(self, x):
         branch3, branch2, branch1, branch0 = x
-        ffca_output1 = self.ffca1(branch0, branch1)
-        ffca_output2 = self.ffca2(ffca_output1, branch2)
-        ffca_output3 = self.ffca3(ffca_output2, branch3)
+        ffca_output = self.ffca1(branch0, branch1)
+        ffca_output = self.ffca2(ffca_output, branch2)
+        ffca_output = self.ffca3(ffca_output, branch3)
 
-        return ffca_output3
+        return ffca_output
 
 

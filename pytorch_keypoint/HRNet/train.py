@@ -13,9 +13,9 @@ from my_dataset_coco import CocoKeypoint
 from train_utils import train_eval_utils as utils
 
 
-def create_model(num_joints, load_pretrain_weights=True):
+def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
     #base_channel=32 means HRnet-w32
-    model = HighResolutionNet(base_channel=32, num_joints=num_joints)
+    model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA)
     
     if load_pretrain_weights:
         # 载入预训练模型权重
@@ -130,7 +130,7 @@ def main(args):
                                       collate_fn=val_dataset.collate_fn)
 
     # create model
-    model = create_model(num_joints=args.num_joints)
+    model = create_model(num_joints=args.num_joints, with_FFCA=args.with_FFCA)
     # print(model)
 
     model.to(device)
@@ -188,7 +188,10 @@ def main(args):
         #if not os.path.exists("./runs"):
         #    os.makedirs("./runs")
         # 将实验结果写入txt，保存在runs文件夹下
-        results_file = "{}/results.txt".format(args.log_path)  # 修改保存结果的文件路径为"./runs/results.txt"
+        if args.with_FFCA:
+            results_file = "{}/withFFCA_results.txt".format(args.log_path)  # 修改保存结果的文件路径为"./runs/results.txt"
+        else:
+            results_file = "{}/noFFCA_results.txt".format(args.log_path)
         with open(results_file, "a") as f:
             # 写入的数据包括coco指标还有loss和learning rate
             result_info = [f"{i:.4f}" for i in coco_info + [mean_loss.item()]] + [f"{lr:.6f}"]
@@ -218,8 +221,11 @@ def main(args):
             last_model = save_files
 
     #save best model and last model
-    torch.save(best_model, "{}/best_model-{}.pth".format(args.output_dir ,epoch))
-    torch.save(last_model, "{}/last_model-{}.pth".format(args.output_dir,epoch))
+    if best_model == last_model:
+        torch.save(best_model, "{}/best_model.pth".format(args.output_dir))
+    else:
+        torch.save(best_model, "{}/best_model-{}.pth".format(args.output_dir ,epoch))
+        torch.save(last_model, "{}/last_model-{}.pth".format(args.output_dir,epoch))
 
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
@@ -283,6 +289,7 @@ if __name__ == "__main__":
     parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
     parser.add_argument("--savebest", default = 1, help="save best model")
     parser.add_argument("--log-path", default = "./runs/exp", help="log path")
+    parser.add_argument("--with_FFCA", default= True, help="enable FFCA")
     args = parser.parse_args()
     print(args)
 
