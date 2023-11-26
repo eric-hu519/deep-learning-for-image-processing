@@ -216,12 +216,13 @@ def main(args):
             save_files["scaler"] = scaler.state_dict()
         if is_save:
             best_model = save_files
+            best_epoches = epoch
             # torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
         if epoch == args.epochs - 1:
             last_model = save_files
 
     #save best model and last model
-    if best_model == last_model:
+    if best_epoches == args.epochs - 1:
         torch.save(best_model, "{}/best_model.pth".format(args.output_dir))
     else:
         torch.save(best_model, "{}/best_model-{}.pth".format(args.output_dir ,epoch))
@@ -268,10 +269,10 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=30, type=int, metavar='N',
+    parser.add_argument('--epochs', default=400, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-steps', default=[350, 500], nargs='+', type=int, help='decrease lr every step-size epochs')
+    parser.add_argument('--lr-steps', default=[250, 320], nargs='+', type=int, help='decrease lr every step-size epochs')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率
