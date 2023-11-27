@@ -12,6 +12,7 @@ class KpLoss(object):
         # [num_kps, H, W] -> [B, num_kps, H, W]
         #遍历每张图片的Heatmap和target进行计算
         #利用stack将每张图片的Heatmap和target进行堆叠
+        #print("targets:",targets)
         heatmaps = torch.stack([t["heatmap"].to(device) for t in targets])
         # [num_kps] -> [B, num_kps]
         kps_weights = torch.stack([t["kps_weights"].to(device) for t in targets])

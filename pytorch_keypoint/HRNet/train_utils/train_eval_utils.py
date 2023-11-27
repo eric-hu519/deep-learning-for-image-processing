@@ -1,6 +1,7 @@
 import math
 import sys
 import time
+import numpy as np
 
 import torch
 
@@ -67,6 +68,35 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
     return mloss, now_lr
 
 
+@torch.no_grad()
+def eval_loss(model,  data_loader, device, epoch,
+                    print_freq=50, scaler=None):
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    mse = KpLoss()
+    mloss = torch.zeros(1).to(device)  # mean losses
+    header = 'Epoch: [{}]'.format(epoch)
+    for i, [images, targets] in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+        images = torch.stack([image.to(device) for image in images])
+
+        # 混合精度训练上下文管理器，如果在CPU环境中不起任何作用
+        with torch.cuda.amp.autocast(enabled=scaler is not None):
+            results = model(images)
+
+            losses = mse(results, targets)
+
+        # reduce losses over all GPUs for logging purpose
+        loss_dict_reduced = utils.reduce_dict({"losses": losses})
+        losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+
+        loss_value = losses_reduced.item()
+        # 记录训练损失
+        mloss = (mloss * i + loss_value) / (i + 1)  # update mean losses
+
+        if not math.isfinite(loss_value):  # 当计算的损失为无穷大时停止训练
+            print("Loss is {}, stopping training".format(loss_value))
+            print(loss_dict_reduced)
+            sys.exit(1)
+        return mloss
 @torch.no_grad()
 def evaluate(model, data_loader, device, flip=False):
     if flip:

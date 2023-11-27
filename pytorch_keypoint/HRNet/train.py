@@ -25,8 +25,11 @@ def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
 
         for k in list(weights_dict.keys()):
             # 如果载入的是imagenet权重，就删除无用权重，关键点检测不需要全连接层
-            if ("head" in k) or ("fc" in k) or ("head" in k):
+            if ("head" in k) or ("fc" in k):
                 del weights_dict[k]
+            if with_FFCA:
+                if("stage4.2" in k):
+                    del weights_dict[k]
 
             #如果载入的是coco权重，对比下num_joints，如果不相等就删除
             #if "final_layer" in k:
@@ -35,7 +38,7 @@ def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
 
         missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
         if len(missing_keys) != 0:
-            print("missing_keys: ", missing_keys)
+            print("missing_keys: ", missing_keys, "\n", "unexpected_keys: ", unexpected_keys)
 
     return model
 
@@ -43,11 +46,10 @@ def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
 def check_loss_list(loss_list, loss):
     if len(loss_list) == (0 or 1):
         return True
-    else:
-        if loss <= min(loss_list):
+    elif loss <= min(loss_list):
             return True
-        else:
-            return False
+    else:
+        return False
 
 def increment_path(path, exist_ok=False, sep='', mkdir=False):
     # Increment file or directory path, i.e. runs/exp --> runs/exp{sep}2, runs/exp{sep}3, ... etc.
@@ -98,8 +100,10 @@ def main(args):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]),
         "val": transforms.Compose([
-            transforms.AffineTransform(scale=(1.00, 1.2), fixed_size=fixed_size),
+            transforms.AffineTransform(scale=(1.00, 1), fixed_size=fixed_size),
+            transforms.KeypointToHeatMap(heatmap_hw=heatmap_hw, gaussian_sigma=2, keypoints_weights=kps_weights),
             transforms.ToTensor(),
+            
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
     }
@@ -169,6 +173,7 @@ def main(args):
     s1_abs_error = []
     fh1_abs_error = []
     fh2_abs_error = []
+    val_loss = []
 
 
 
@@ -185,9 +190,13 @@ def main(args):
         # update the learning rate
         lr_scheduler.step()
 
+        mloss = utils.eval_loss(model, val_data_loader, device=device, epoch=epoch, scaler=scaler)
+
         # evaluate on the test dataset
         coco_info = utils.evaluate(model, val_data_loader, device=device,
                                    flip=True)
+        coco_info.append(mloss.item())
+        print("val_loss: ", coco_info[14],"\n")
         #检查runs文件夹是否存在，若不存在则创建
         #if not os.path.exists("./runs"):
         #    os.makedirs("./runs")
@@ -207,8 +216,9 @@ def main(args):
         sc_abs_error.append(coco_info[11])
         fh1_abs_error.append(coco_info[12])
         fh2_abs_error.append(coco_info[13])
+        val_loss.append(coco_info[14])
 
-        is_save = check_loss_list(train_loss, train_loss[-1])
+        is_save = check_loss_list(val_loss, val_loss[-1])
 
         # save weights
         save_files = {
@@ -222,11 +232,11 @@ def main(args):
             best_model = save_files
             best_epoches = epoch
             # torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
-        if epoch == args.epochs - 1:
+        if epoch == (args.epochs - 1):
             last_model = save_files
 
     #save best model and last model
-    if best_epoches == args.epochs - 1:
+    if best_epoches == (args.epochs - 1):
         torch.save(best_model, "{}/best_model.pth".format(args.output_dir))
     else:
         torch.save(best_model, "{}/best_model-{}.pth".format(args.output_dir ,epoch))
@@ -248,7 +258,7 @@ def main(args):
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         from plot_curve import plot_loss_and_lr
-        plot_loss_and_lr(train_loss, val_map, learning_rate,str(args.log_path))
+        plot_loss_and_lr(train_loss, val_loss, learning_rate,str(args.log_path))
 
     # plot mAP curve
     if len(val_map) != 0:
@@ -276,7 +286,7 @@ if __name__ == "__main__":
                         help='person_keypoints.json path')
     # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
     parser.add_argument('--person-det', type=str, default=None)
-    parser.add_argument('--fixed-size', default=[512, 512], nargs='+', type=int, help='input size')
+    parser.add_argument('--fixed-size', default=[256, 256], nargs='+', type=int, help='input size')
     # keypoints点数
     parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
     # 文件保存地址
@@ -286,7 +296,7 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=200, type=int, metavar='N',
+    parser.add_argument('--epochs', default=5, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-steps', default=[100, 150], nargs='+', type=int, help='decrease lr every step-size epochs')

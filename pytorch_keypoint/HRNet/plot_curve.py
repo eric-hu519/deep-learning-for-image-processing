@@ -36,3 +36,52 @@ def plot_loss_and_lr(train_loss, val_loss, learning_rate, path):
         print("successful save loss curve! ")
     except Exception as e:
         print(e)
+    
+def plot_map(mAP,path):
+    try:
+        x = list(range(len(mAP)))
+        plt.plot(x, mAP, label='mAp')
+        plt.xlabel('epoch')
+        plt.ylabel('mAP')
+        plt.title('Eval mAP')
+        plt.xlim(0, len(mAP))
+        plt.legend(loc='best')
+        path = path + '/figs/'
+                #判断runs文件夹是否存在，不存在则创建
+        if not os.path.exists(path):
+            os.mkdir(path)
+        plt.savefig('{}mAP.png'.format(path))
+        plt.close()
+        print("successful save mAP curve!")
+    except Exception as e:
+        print(e)
+
+
+def plot_abs_error(abs_error, err_name, path):
+    try:
+        x = list(range(len(abs_error)))
+        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        
+        ax[0].plot(x, (np.log(abs_error) + np.spacing(1)), label='log abs error')
+        ax[0].set_xlabel('epoch')
+        ax[0].set_ylabel('log abs error')
+        ax[0].set_title('Eval log abs_error')
+        ax[0].set_xlim(0, len(abs_error))
+        ax[0].legend(loc='best')
+
+        ax[1].plot(x, abs_error, label='abs error')
+        ax[1].set_xlabel('epoch')
+        ax[1].set_ylabel('abs error')
+        ax[1].set_title('Eval abs_error')
+        ax[1].set_xlim(0, len(abs_error))
+        ax[1].legend(loc='best')
+
+        fig.tight_layout()
+        path = path + '/figs/'
+        if not os.path.exists(path):
+            os.mkdir(path)
+        fig.savefig('{}{}_abs_error.png'.format(path, err_name))
+        plt.close()
+        print("successful save {}_error curve!".format(err_name))
+    except Exception as e:
+        print(e)

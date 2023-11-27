@@ -6,6 +6,7 @@ import time
 from collections import defaultdict
 from . import mask as maskUtils
 import copy
+import torch
 
 class COCOeval:
     # Interface for evaluating detection on the Microsoft COCO dataset.
@@ -234,6 +235,7 @@ class COCOeval:
                         #计算各可见关键点的x,y的误差
                         dx = xd - xg
                         dy = yd - yg
+                        
                     else:
                         # measure minimum distance to keypoints in (x0,y0) & (x1,y1)
                         z = np.zeros((k))
