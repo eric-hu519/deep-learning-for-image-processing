@@ -11,6 +11,7 @@ import transforms
 from model import HighResolutionNet
 from my_dataset_coco import CocoKeypoint
 from train_utils import train_eval_utils as utils
+import wandb
 
 
 def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
@@ -67,7 +68,10 @@ def increment_path(path, exist_ok=False, sep='', mkdir=False):
 
 def main(args):
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
-    print("Using {} device training.".format(device.type))
+    
+
+
+
 
     # 用来保存coco_info的文件
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -227,6 +231,19 @@ def main(args):
     else:
         torch.save(best_model, "{}/best_model-{}.pth".format(args.output_dir ,epoch))
         torch.save(last_model, "{}/last_model-{}.pth".format(args.output_dir,epoch))
+    #save train params
+    train_params = {
+        "batch_size": args.batch_size,
+        "learning_rate": args.lr,
+        "num_epochs": args.epochs,
+        "weight-decay": args.weight_decay,
+        "lr_steps": args.lr_steps,
+        # 添加其他训练参数...
+    }
+
+    with open("{}/train_config.txt".format(args.log_path), "w") as f:
+        for key, value in train_params.items():
+            f.write(f"{key}: {value}\n")
 
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
@@ -276,7 +293,7 @@ if __name__ == "__main__":
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率
-    parser.add_argument('--lr', default=0.001, type=float,
+    parser.add_argument('--lr', default=0.00085, type=float,
                         help='initial learning rate, 0.02 is the default value for training '
                              'on 8 gpus and 2 images_per_gpu')
     # AdamW的weight_decay参数
@@ -290,7 +307,7 @@ if __name__ == "__main__":
     parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
     parser.add_argument("--savebest", default = 1, help="save best model")
     parser.add_argument("--log-path", default = "./runs/exp", help="log path")
-    parser.add_argument("--with_FFCA", default= True, help="enable FFCA")
+    parser.add_argument("--with_FFCA", default= True , help="enable FFCA")
     args = parser.parse_args()
     print(args)
 
