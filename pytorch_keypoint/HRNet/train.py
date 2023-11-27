@@ -25,7 +25,7 @@ def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
 
         for k in list(weights_dict.keys()):
             # 如果载入的是imagenet权重，就删除无用权重，关键点检测不需要全连接层
-            if ("head" in k) or ("fc" in k):
+            if ("head" in k) or ("fc" in k) or ("head" in k):
                 del weights_dict[k]
 
             #如果载入的是coco权重，对比下num_joints，如果不相等就删除
@@ -248,7 +248,7 @@ def main(args):
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         from plot_curve import plot_loss_and_lr
-        plot_loss_and_lr(train_loss, learning_rate,str(args.log_path))
+        plot_loss_and_lr(train_loss, val_map, learning_rate,str(args.log_path))
 
     # plot mAP curve
     if len(val_map) != 0:
@@ -276,7 +276,7 @@ if __name__ == "__main__":
                         help='person_keypoints.json path')
     # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
     parser.add_argument('--person-det', type=str, default=None)
-    parser.add_argument('--fixed-size', default=[256, 256], nargs='+', type=int, help='input size')
+    parser.add_argument('--fixed-size', default=[512, 512], nargs='+', type=int, help='input size')
     # keypoints点数
     parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
     # 文件保存地址
@@ -286,14 +286,14 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=400, type=int, metavar='N',
+    parser.add_argument('--epochs', default=200, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-steps', default=[250, 320], nargs='+', type=int, help='decrease lr every step-size epochs')
+    parser.add_argument('--lr-steps', default=[100, 150], nargs='+', type=int, help='decrease lr every step-size epochs')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率
-    parser.add_argument('--lr', default=0.00085, type=float,
+    parser.add_argument('--lr', default=0.0008, type=float,
                         help='initial learning rate, 0.02 is the default value for training '
                              'on 8 gpus and 2 images_per_gpu')
     # AdamW的weight_decay参数
