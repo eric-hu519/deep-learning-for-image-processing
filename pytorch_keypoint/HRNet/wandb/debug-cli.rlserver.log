@@ -81,3 +81,287 @@ wandb.errors.CommError: name required for project query (Error 400: Bad Request)
 2023-11-28 15:54:42 INFO Running runs: ['zv1qrba3']
 2023-11-28 15:54:42 ERROR Detected 3 failed runs in the first 60 seconds, shutting down.
 2023-11-28 15:54:42 INFO To disable this check set WANDB_AGENT_DISABLE_FLAPPING=true
+2023-11-28 16:11:56 INFO Running runs: []
+2023-11-28 16:11:57 INFO Agent received command: run
+2023-11-28 16:11:57 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 262
+	fixed-size: [[512, 512], [256, 256], [128, 128], [64, 64]]
+	lr: 0.0065420477126677985
+	lr-gamma: 0.15307560911350895
+	lr-steps: [[50, 100], [100, 150]]
+	weight-decay: 5.216043336621673e-05
+	with_FFCA: [True, False]
+2023-11-28 16:11:57 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=262 "--fixed-size=[[512, 512], [256, 256], [128, 128], [64, 64]]" --lr=0.0065420477126677985 --lr-gamma=0.15307560911350895 "--lr-steps=[[50, 100], [100, 150]]" --weight-decay=5.216043336621673e-05 "--with_FFCA=[True, False]"
+2023-11-28 16:12:02 INFO Running runs: ['ky6wvt82']
+2023-11-28 16:12:02 INFO Cleaning up finished run: ky6wvt82
+2023-11-28 16:12:03 INFO Agent received command: run
+2023-11-28 16:12:03 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 216
+	fixed-size: [[512, 512], [256, 256], [128, 128], [64, 64]]
+	lr: 0.009089338716541218
+	lr-gamma: 0.4383626046524135
+	lr-steps: [[50, 100], [100, 150]]
+	weight-decay: 0.00026899494703824827
+	with_FFCA: [True, False]
+2023-11-28 16:12:03 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=216 "--fixed-size=[[512, 512], [256, 256], [128, 128], [64, 64]]" --lr=0.009089338716541218 --lr-gamma=0.4383626046524135 "--lr-steps=[[50, 100], [100, 150]]" --weight-decay=0.00026899494703824827 "--with_FFCA=[True, False]"
+2023-11-28 16:12:08 INFO Running runs: ['i9b8qfnu']
+2023-11-28 16:12:08 INFO Cleaning up finished run: i9b8qfnu
+2023-11-28 16:12:09 INFO Agent received command: run
+2023-11-28 16:12:09 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 189
+	fixed-size: [[512, 512], [256, 256], [128, 128], [64, 64]]
+	lr: 0.004814388639208262
+	lr-gamma: 0.25632958162298547
+	lr-steps: [[50, 100], [100, 150]]
+	weight-decay: 9.772694101669578e-05
+	with_FFCA: [True, False]
+2023-11-28 16:12:09 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=189 "--fixed-size=[[512, 512], [256, 256], [128, 128], [64, 64]]" --lr=0.004814388639208262 --lr-gamma=0.25632958162298547 "--lr-steps=[[50, 100], [100, 150]]" --weight-decay=9.772694101669578e-05 "--with_FFCA=[True, False]"
+2023-11-28 16:12:14 INFO Running runs: ['b19ivc6x']
+2023-11-28 16:12:14 ERROR Detected 3 failed runs in the first 60 seconds, shutting down.
+2023-11-28 16:12:14 INFO To disable this check set WANDB_AGENT_DISABLE_FLAPPING=true
+2023-11-28 16:12:50 INFO Running runs: []
+2023-11-28 16:12:50 INFO Agent received command: run
+2023-11-28 16:12:50 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 209
+	fixed-size: [512, 256, 128, 64]
+	lr: 0.00856226961002771
+	lr-gamma: 0.470726576864088
+	lr-steps: [50, 100, 150, 200]
+	weight-decay: 0.0003427828863513499
+	with_FFCA: [True, False]
+2023-11-28 16:12:50 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=209 "--fixed-size=[512, 256, 128, 64]" --lr=0.00856226961002771 --lr-gamma=0.470726576864088 "--lr-steps=[50, 100, 150, 200]" --weight-decay=0.0003427828863513499 "--with_FFCA=[True, False]"
+2023-11-28 16:12:55 INFO Running runs: ['or0ajnom']
+2023-11-28 16:12:55 INFO Cleaning up finished run: or0ajnom
+2023-11-28 16:12:56 INFO Agent received command: run
+2023-11-28 16:12:56 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 294
+	fixed-size: [512, 256, 128, 64]
+	lr: 0.0071797053789943955
+	lr-gamma: 0.2364216481548146
+	lr-steps: [50, 100, 150, 200]
+	weight-decay: 0.00022765306111037823
+	with_FFCA: [True, False]
+2023-11-28 16:12:56 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=294 "--fixed-size=[512, 256, 128, 64]" --lr=0.0071797053789943955 --lr-gamma=0.2364216481548146 "--lr-steps=[50, 100, 150, 200]" --weight-decay=0.00022765306111037823 "--with_FFCA=[True, False]"
+2023-11-28 16:13:01 INFO Running runs: ['zkdolr16']
+2023-11-28 16:13:01 INFO Cleaning up finished run: zkdolr16
+2023-11-28 16:13:01 INFO Agent received command: run
+2023-11-28 16:13:01 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 214
+	fixed-size: [512, 256, 128, 64]
+	lr: 0.003302983653801775
+	lr-gamma: 0.2315308310757692
+	lr-steps: [50, 100, 150, 200]
+	weight-decay: 0.00044981655272053375
+	with_FFCA: [True, False]
+2023-11-28 16:13:01 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=214 "--fixed-size=[512, 256, 128, 64]" --lr=0.003302983653801775 --lr-gamma=0.2315308310757692 "--lr-steps=[50, 100, 150, 200]" --weight-decay=0.00044981655272053375 "--with_FFCA=[True, False]"
+2023-11-28 16:13:06 INFO Running runs: ['8fplm8mt']
+2023-11-28 16:13:06 ERROR Detected 3 failed runs in the first 60 seconds, shutting down.
+2023-11-28 16:13:06 INFO To disable this check set WANDB_AGENT_DISABLE_FLAPPING=true
+2023-11-28 16:14:51 INFO Running runs: []
+2023-11-28 16:14:51 INFO Agent received command: run
+2023-11-28 16:14:51 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 279
+	fixed-size: 256
+	lr: 0.0021418364328541725
+	lr-gamma: 0.1126902965607851
+	lr-steps: 50
+	weight-decay: 0.00034257365604320835
+	with_FFCA: True
+2023-11-28 16:14:51 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=279 --fixed-size=256 --lr=0.0021418364328541725 --lr-gamma=0.1126902965607851 --lr-steps=50 --weight-decay=0.00034257365604320835 --with_FFCA=True
+2023-11-28 16:14:56 INFO Running runs: ['t3niqygh']
+2023-11-28 16:14:56 INFO Cleaning up finished run: t3niqygh
+2023-11-28 16:14:59 INFO Agent received command: run
+2023-11-28 16:14:59 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 192
+	fixed-size: 512
+	lr: 0.008344069581785138
+	lr-gamma: 0.41009798109173534
+	lr-steps: 100
+	weight-decay: 0.0003474521165157999
+	with_FFCA: True
+2023-11-28 16:14:59 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=192 --fixed-size=512 --lr=0.008344069581785138 --lr-gamma=0.41009798109173534 --lr-steps=100 --weight-decay=0.0003474521165157999 --with_FFCA=True
+2023-11-28 16:15:04 INFO Running runs: ['vtigj03v']
+2023-11-28 16:15:04 INFO Cleaning up finished run: vtigj03v
+2023-11-28 16:15:04 INFO Agent received command: run
+2023-11-28 16:15:04 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 292
+	fixed-size: 256
+	lr: 0.002731778531711894
+	lr-gamma: 0.1684275431287549
+	lr-steps: 200
+	weight-decay: 0.0002241770145238436
+	with_FFCA: True
+2023-11-28 16:15:04 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=292 --fixed-size=256 --lr=0.002731778531711894 --lr-gamma=0.1684275431287549 --lr-steps=200 --weight-decay=0.0002241770145238436 --with_FFCA=True
+2023-11-28 16:15:09 INFO Running runs: ['ugqwi53t']
+2023-11-28 16:15:09 ERROR Detected 3 failed runs in the first 60 seconds, shutting down.
+2023-11-28 16:15:09 INFO To disable this check set WANDB_AGENT_DISABLE_FLAPPING=true
+2023-11-28 16:17:45 INFO Running runs: []
+2023-11-28 16:17:46 INFO Agent received command: run
+2023-11-28 16:17:46 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 193
+	fixed-size: 128
+	lr: 0.009560760247385777
+	lr-gamma: 0.4730633874613897
+	lr-steps: 200
+	weight-decay: 0.00028079027676676624
+	with_FFCA: True
+2023-11-28 16:17:46 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=193 --fixed-size=128 --lr=0.009560760247385777 --lr-gamma=0.4730633874613897 --lr-steps=200 --weight-decay=0.00028079027676676624 --with_FFCA=True
+2023-11-28 16:17:51 INFO Running runs: ['8hhl2yxy']
+2023-11-28 16:17:51 INFO Cleaning up finished run: 8hhl2yxy
+2023-11-28 16:17:52 INFO Agent received command: run
+2023-11-28 16:17:52 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 190
+	fixed-size: 128
+	lr: 0.003494768079987897
+	lr-gamma: 0.34264512873537545
+	lr-steps: 100
+	weight-decay: 0.00026666964522762613
+	with_FFCA: True
+2023-11-28 16:17:52 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=190 --fixed-size=128 --lr=0.003494768079987897 --lr-gamma=0.34264512873537545 --lr-steps=100 --weight-decay=0.00026666964522762613 --with_FFCA=True
+2023-11-28 16:17:57 INFO Running runs: ['b75m263d']
+2023-11-28 16:17:57 INFO Cleaning up finished run: b75m263d
+2023-11-28 16:17:57 INFO Agent received command: run
+2023-11-28 16:17:57 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 221
+	fixed-size: 256
+	lr: 0.0030225468451898253
+	lr-gamma: 0.1647943564788296
+	lr-steps: 50
+	weight-decay: 0.00026792991485835593
+	with_FFCA: True
+2023-11-28 16:17:57 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=221 --fixed-size=256 --lr=0.0030225468451898253 --lr-gamma=0.1647943564788296 --lr-steps=50 --weight-decay=0.00026792991485835593 --with_FFCA=True
+2023-11-28 16:18:02 INFO Running runs: ['viuirl5c']
+2023-11-28 16:18:02 ERROR Detected 3 failed runs in the first 60 seconds, shutting down.
+2023-11-28 16:18:02 INFO To disable this check set WANDB_AGENT_DISABLE_FLAPPING=true
+2023-11-28 16:18:49 INFO Running runs: []
+2023-11-28 16:18:49 INFO Agent received command: run
+2023-11-28 16:18:49 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 252
+	fixed-size: 256
+	lr: 0.00493067619598093
+	lr-gamma: 0.4049423041231987
+	lr-steps: 50
+	weight-decay: 0.0001362750734027295
+	with_FFCA: False
+2023-11-28 16:18:49 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=252 --fixed-size=256 --lr=0.00493067619598093 --lr-gamma=0.4049423041231987 --lr-steps=50 --weight-decay=0.0001362750734027295 --with_FFCA=False
+2023-11-28 16:18:54 INFO Running runs: ['sit3myi1']
+2023-11-28 16:18:54 INFO Cleaning up finished run: sit3myi1
+2023-11-28 16:18:55 INFO Agent received command: run
+2023-11-28 16:18:55 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 184
+	fixed-size: 512
+	lr: 0.00840603777035325
+	lr-gamma: 0.28402750535021215
+	lr-steps: 100
+	weight-decay: 0.0003304745192045721
+	with_FFCA: True
+2023-11-28 16:18:55 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=184 --fixed-size=512 --lr=0.00840603777035325 --lr-gamma=0.28402750535021215 --lr-steps=100 --weight-decay=0.0003304745192045721 --with_FFCA=True
+2023-11-28 16:19:00 INFO Running runs: ['bgqpec0n']
+2023-11-28 16:19:00 INFO Cleaning up finished run: bgqpec0n
+2023-11-28 16:19:01 INFO Agent received command: run
+2023-11-28 16:19:01 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 274
+	fixed-size: 128
+	lr: 0.0041821602924834314
+	lr-gamma: 0.46146318626395744
+	lr-steps: 150
+	weight-decay: 0.0004778690870215235
+	with_FFCA: True
+2023-11-28 16:19:01 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=274 --fixed-size=128 --lr=0.0041821602924834314 --lr-gamma=0.46146318626395744 --lr-steps=150 --weight-decay=0.0004778690870215235 --with_FFCA=True
+2023-11-28 16:19:06 INFO Running runs: ['j1bjthdr']
+2023-11-28 16:19:06 ERROR Detected 3 failed runs in the first 60 seconds, shutting down.
+2023-11-28 16:19:06 INFO To disable this check set WANDB_AGENT_DISABLE_FLAPPING=true
+2023-11-28 16:24:20 INFO Running runs: []
+2023-11-28 16:24:20 INFO Agent received command: run
+2023-11-28 16:24:20 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 251
+	fixed-size: 256
+	lr: 0.008106818750917363
+	lr-gamma: 0.152797119959301
+	lr-steps: 100
+	weight-decay: 0.00048489954288152034
+	with_FFCA: True
+2023-11-28 16:24:20 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=251 --fixed-size=256 --lr=0.008106818750917363 --lr-gamma=0.152797119959301 --lr-steps=100 --weight-decay=0.00048489954288152034 --with_FFCA=True
+2023-11-28 16:24:25 INFO Running runs: ['k6updi8t']
+2023-11-28 16:24:25 INFO Cleaning up finished run: k6updi8t
+2023-11-28 16:24:26 INFO Agent received command: run
+2023-11-28 16:24:26 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 300
+	fixed-size: 512
+	lr: 0.008713640652146836
+	lr-gamma: 0.14581051084145058
+	lr-steps: 200
+	weight-decay: 0.00024065261832897596
+	with_FFCA: True
+2023-11-28 16:24:26 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=300 --fixed-size=512 --lr=0.008713640652146836 --lr-gamma=0.14581051084145058 --lr-steps=200 --weight-decay=0.00024065261832897596 --with_FFCA=True
+2023-11-28 16:24:31 INFO Running runs: ['td96i5l5']
+2023-11-28 16:24:31 INFO Cleaning up finished run: td96i5l5
+2023-11-28 16:24:32 INFO Agent received command: run
+2023-11-28 16:24:32 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 258
+	fixed-size: 128
+	lr: 0.004636760571952164
+	lr-gamma: 0.41314751413190354
+	lr-steps: 150
+	weight-decay: 0.0002801534967592566
+	with_FFCA: True
+2023-11-28 16:24:32 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=258 --fixed-size=128 --lr=0.004636760571952164 --lr-gamma=0.41314751413190354 --lr-steps=150 --weight-decay=0.0002801534967592566 --with_FFCA=True
+2023-11-28 16:24:37 INFO Running runs: ['rvx3n2db']
+2023-11-28 16:24:37 ERROR Detected 3 failed runs in the first 60 seconds, shutting down.
+2023-11-28 16:24:37 INFO To disable this check set WANDB_AGENT_DISABLE_FLAPPING=true
+2023-11-28 16:25:09 INFO Running runs: []
+2023-11-28 16:25:09 INFO Agent received command: run
+2023-11-28 16:25:09 INFO Agent starting run with config:
+	batch-size: 16
+	epochs: 274
+	fixed-size: 128
+	lr: 0.006087398175491525
+	lr-gamma: 0.4942385401902195
+	lr-steps: 150
+	weight-decay: 0.0004781800126380592
+	with_FFCA: True
+2023-11-28 16:25:09 INFO About to run command: /usr/bin/env python train.py --batch-size=16 --epochs=274 --fixed-size=128 --lr=0.006087398175491525 --lr-gamma=0.4942385401902195 --lr-steps=150 --weight-decay=0.0004781800126380592 --with_FFCA=True
+2023-11-28 16:25:14 INFO Running runs: ['jaszdcdt']
+2023-11-28 16:25:20 INFO Cleaning up finished run: jaszdcdt
+2023-11-28 16:25:26 INFO Agent received command: run
+2023-11-28 16:25:26 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 242
+	fixed-size: 512
+	lr: 0.004755691609755078
+	lr-gamma: 0.2749240394078367
+	lr-steps: 200
+	weight-decay: 0.00021643308992543465
+	with_FFCA: True
+2023-11-28 16:25:26 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=242 --fixed-size=512 --lr=0.004755691609755078 --lr-gamma=0.2749240394078367 --lr-steps=200 --weight-decay=0.00021643308992543465 --with_FFCA=True
+2023-11-28 16:26:30 INFO Running runs: []
+2023-11-28 16:26:30 INFO Agent received command: run
+2023-11-28 16:26:30 INFO Agent starting run with config:
+	batch-size: 28
+	epochs: 232
+	fixed-size: 128
+	lr: 0.0048278759915509565
+	lr-gamma: 0.3141728494848471
+	lr-steps: 100
+	weight-decay: 0.00015978710639948308
+	with_FFCA: False
+2023-11-28 16:26:30 INFO About to run command: /usr/bin/env python train.py --batch-size=28 --epochs=232 --fixed-size=128 --lr=0.0048278759915509565 --lr-gamma=0.3141728494848471 --lr-steps=100 --weight-decay=0.00015978710639948308 --with_FFCA=False
+2023-11-28 16:26:35 INFO Running runs: ['shhs53tx']

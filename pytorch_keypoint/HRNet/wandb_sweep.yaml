@@ -13,11 +13,11 @@ parameters:
     min: 180
     max: 300
   with_FFCA:
-    value: [True, False]
+    values: [True, False]
   fixed-size:
-    value: [512,256,128,64]
+    values: [512,256,128,64]
   lr-steps:
-    value: [50, 100, 150, 200]
+    values: [50, 100, 150, 200]
   weight-decay:
     min: 0.00005
     max: 0.0005
