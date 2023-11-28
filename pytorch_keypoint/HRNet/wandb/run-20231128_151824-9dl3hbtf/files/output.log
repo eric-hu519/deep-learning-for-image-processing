@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/rlserver/Documents/deep-learning-for-image-processing/pytorch_keypoint/HRNet/train.py", line 394, in <module>
+    main(args)
+  File "/home/rlserver/Documents/deep-learning-for-image-processing/pytorch_keypoint/HRNet/train.py", line 115, in main
+    wandb_init(args)
+  File "/home/rlserver/Documents/deep-learning-for-image-processing/pytorch_keypoint/HRNet/train.py", line 18, in wandb_init
+    wandb.run.name = args.log_path.split('/')[-1]
+AttributeError: 'PosixPath' object has no attribute 'split'

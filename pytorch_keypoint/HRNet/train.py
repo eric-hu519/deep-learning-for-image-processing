@@ -13,6 +13,47 @@ from my_dataset_coco import CocoKeypoint
 from train_utils import train_eval_utils as utils
 import wandb
 
+def wandb_init(args):
+    wandb.init(project="spinopelvic", config=args)
+    wandb.run.name = str(args.log_path).split('/')[-1]
+    #wandb.run.save()
+    wandb.watch_called = False
+
+    # WandB – Config is a variable that holds and saves hyperparameters and inputs
+    config = wandb.config          # Initialize config
+    config.learning_rate = args.lr
+    config.batch_size = args.batch_size
+    config.epochs = args.epochs
+    config.weight_decay = args.weight_decay
+    config.lr_steps = args.lr_steps
+    config.lr_gamma = args.lr_gamma
+    config.num_joints = args.num_joints
+    config.fixed_size = args.fixed_size
+    config.with_FFCA = args.with_FFCA
+
+def wandb_log(epoch, train_loss, cocoinfo,best_results):
+    wandb.log({
+        "epoch": epoch,
+        "train_loss": train_loss,
+        "val_loss": cocoinfo[14],
+        "sc_abs_error": cocoinfo[10],
+        "s1_abs_error": cocoinfo[11],
+        "fh1_abs_error": cocoinfo[12],
+        "fh2_abs_error": cocoinfo[13],
+        "sc_best": best_results[0],
+        "s1_best": best_results[1],
+        "fh1_best": best_results[2],
+        "fh2_best": best_results[3],
+
+        "Avg Precision @[ IoU=0.50:0.95 | area=   all | maxDets=20 ]": cocoinfo[0],
+        "Avg Precision @[ IoU=0.50      | area=   all | maxDets=20 ]": cocoinfo[1],
+        "Avg Precision @[ IoU=0.75      | area=   all | maxDets=20 ]": cocoinfo[2],
+        "Avg Precision @[ IoU=0.50:0.95 | area= large | maxDets=20 ]": cocoinfo[4],
+        "Avg Recall @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ]": cocoinfo[5],
+        "Avg Recall @[ IoU=0.50 | area= all | maxDets= 20 ]": cocoinfo[6],
+        "Avg Recall @[ IoU=0.75 | area= all | maxDets= 20 ]": cocoinfo[7],
+        "Avg Recall @[ IoU=0.50:0.95 | area= large | maxDets= 20 ]": cocoinfo[9],
+    })
 
 def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
     #base_channel=32 means HRnet-w32
@@ -70,7 +111,8 @@ def increment_path(path, exist_ok=False, sep='', mkdir=False):
 
 def main(args):
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
-    
+    wandb.login()
+    wandb_init(args)
 
 
 
@@ -146,7 +188,13 @@ def main(args):
     # define optimizer
     params = [p for p in model.parameters() if p.requires_grad]
     #define adam as optimizer
-    optimizer = torch.optim.AdamW(params,
+    if args.optimizer == "SGD":
+        optimizer = torch.optim.SGD(params,
+                                    lr=args.lr,
+                                    momentum=0.9,
+                                    weight_decay=args.weight_decay)
+    else:
+        optimizer = torch.optim.AdamW(params,
                                   lr=args.lr,
                                   weight_decay=args.weight_decay)
 
@@ -174,7 +222,9 @@ def main(args):
     fh1_abs_error = []
     fh2_abs_error = []
     val_loss = []
+    best_err = np.zeros((4,))
 
+    
 
 
     for epoch in range(args.start_epoch, args.epochs):
@@ -196,6 +246,7 @@ def main(args):
         coco_info = utils.evaluate(model, val_data_loader, device=device,
                                    flip=True)
         coco_info.append(mloss.item())
+
         print("val_loss: ", coco_info[14],"\n")
         #检查runs文件夹是否存在，若不存在则创建
         #if not os.path.exists("./runs"):
@@ -217,9 +268,17 @@ def main(args):
         fh1_abs_error.append(coco_info[12])
         fh2_abs_error.append(coco_info[13])
         val_loss.append(coco_info[14])
+        if check_loss_list(s1_abs_error, s1_abs_error[-1]):
+            best_err[0] = s1_abs_error[-1]
+        if check_loss_list(sc_abs_error, sc_abs_error[-1]):
+            best_err[1] = sc_abs_error[-1]
+        if check_loss_list(fh1_abs_error, fh1_abs_error[-1]):
+            best_err[2] = fh1_abs_error[-1]
+        if check_loss_list(fh2_abs_error, fh2_abs_error[-1]):
+            best_err[3] = fh2_abs_error[-1]
 
         is_save = check_loss_list(val_loss, val_loss[-1])
-
+        wandb_log(epoch, train_loss[-1], coco_info, best_err)
         # save weights
         save_files = {
             'model': model.state_dict(),
@@ -239,7 +298,7 @@ def main(args):
     if best_epoches == (args.epochs - 1):
         torch.save(best_model, "{}/best_model.pth".format(args.output_dir))
     else:
-        torch.save(best_model, "{}/best_model-{}.pth".format(args.output_dir ,epoch))
+        torch.save(best_model, "{}/best_model-{}.pth".format(args.output_dir ,best_epoches))
         torch.save(last_model, "{}/last_model-{}.pth".format(args.output_dir,epoch))
     #save train params
     train_params = {
@@ -250,7 +309,8 @@ def main(args):
         "lr_steps": args.lr_steps,
         # 添加其他训练参数...
     }
-
+    wandb.run.save()
+    wandb.finish()
     with open("{}/train_config.txt".format(args.log_path), "w") as f:
         for key, value in train_params.items():
             f.write(f"{key}: {value}\n")
@@ -271,6 +331,12 @@ def main(args):
         plot_abs_error(s1_abs_error,'s1',str(args.log_path))
         plot_abs_error(fh1_abs_error,'fh1',str(args.log_path))
         plot_abs_error(fh2_abs_error,'fh2',str(args.log_path))
+    if len(best_err) != 0:
+        print("min_sc_e: ",best_err[0],"\n",
+              "min_s1_e: ",best_err[1],"\n",
+              "min_fh1_e: ",best_err[2],"\n",
+              "min_fh2_e: ",best_err[3],"\n")
+
 if __name__ == "__main__":
     import argparse
 
@@ -286,7 +352,7 @@ if __name__ == "__main__":
                         help='person_keypoints.json path')
     # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
     parser.add_argument('--person-det', type=str, default=None)
-    parser.add_argument('--fixed-size', default=[256, 256], nargs='+', type=int, help='input size')
+    parser.add_argument('--fixed-size', default=[512, 512], nargs='+', type=int, help='input size')
     # keypoints点数
     parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
     # 文件保存地址
@@ -296,14 +362,14 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=5, type=int, metavar='N',
+    parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-steps', default=[100, 150], nargs='+', type=int, help='decrease lr every step-size epochs')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率
-    parser.add_argument('--lr', default=0.0008, type=float,
+    parser.add_argument('--lr', default=0.0009, type=float,
                         help='initial learning rate, 0.02 is the default value for training '
                              'on 8 gpus and 2 images_per_gpu')
     # AdamW的weight_decay参数
@@ -311,13 +377,14 @@ if __name__ == "__main__":
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
     # 训练的batch size
-    parser.add_argument('--batch-size', default=16, type=int, metavar='N',
+    parser.add_argument('--batch-size', default=28, type=int, metavar='N',
                         help='batch size when training.')
     # 是否使用混合精度训练(需要GPU支持混合精度)
     parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
     parser.add_argument("--savebest", default = 1, help="save best model")
     parser.add_argument("--log-path", default = "./runs/exp", help="log path")
     parser.add_argument("--with_FFCA", default= True , help="enable FFCA")
+    parser.add_argument("--optimizer", default="adamw", help="optimizer")
     args = parser.parse_args()
     print(args)
 

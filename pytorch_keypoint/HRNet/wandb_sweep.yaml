@@ -1,0 +1,26 @@
+program: train.py
+method: bayes
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  lr:
+    min: 0.00085
+    max: 0.01
+  batch-size:
+    values: [16, 28]
+  epochs:
+    min: 180
+    max: 300
+  with_FFCA:
+    value: [True, False]
+  fixed-size:
+    value: [[512,512],[256,256],[128,128],[64,64]]
+  lr-steps:
+    value: [[50,100],[100,150],]
+  weight-decay:
+    min: 0.00005
+    max: 0.0005
+  lr-gamma:
+    min: 0.1
+    max: 0.5

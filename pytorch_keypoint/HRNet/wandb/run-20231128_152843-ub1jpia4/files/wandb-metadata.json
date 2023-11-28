@@ -1,0 +1,148 @@
+{
+    "os": "Linux-5.15.0-89-generic-x86_64-with-glibc2.31",
+    "python": "3.9.18",
+    "heartbeatAt": "2023-11-28T07:28:44.652758",
+    "startedAt": "2023-11-28T07:28:43.507804",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/home/rlserver/Documents/deep-learning-for-image-processing/pytorch_keypoint/HRNet/train.py",
+    "codePathLocal": "train.py",
+    "codePath": "pytorch_keypoint/HRNet/train.py",
+    "git": {
+        "remote": "git@github.com:eric-hu519/deep-learning-for-image-processing.git",
+        "commit": "d27195047a3f949d6d45ce8799f58ec6a467e255"
+    },
+    "email": "huzhongyu519@outlook.com",
+    "root": "/home/rlserver/Documents/deep-learning-for-image-processing",
+    "host": "rlserver",
+    "username": "rlserver",
+    "executable": "/home/rlserver/miniconda3/envs/dlenv/bin/python",
+    "cpu_count": 14,
+    "cpu_count_logical": 20,
+    "cpu_freq": {
+        "current": 3591.1603499999997,
+        "min": 800.0,
+        "max": 4620.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 5077.012,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 5058.152,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 5041.4,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 5020.541,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 5049.856,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 5018.358,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 5033.428,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 4993.64,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 5024.467,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 5048.772,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3984.608,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 5037.147,
+            "min": 800.0,
+            "max": 5100.0
+        },
+        {
+            "current": 3816.779,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 3837.486,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 3808.635,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 3812.458,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 3799.346,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 3819.294,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 3798.74,
+            "min": 800.0,
+            "max": 3900.0
+        },
+        {
+            "current": 3796.289,
+            "min": 800.0,
+            "max": 3900.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 467.78900146484375,
+            "used": 196.90550994873047
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 4090",
+            "memory_total": 25757220864
+        }
+    ],
+    "memory": {
+        "total": 62.607608795166016
+    }
+}

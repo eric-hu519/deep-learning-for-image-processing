@@ -1,0 +1,711 @@
+loading annotations into memory...
+Done (t=0.00s)
+creating index...
+index created!
+Using 8 dataloader workers
+loading annotations into memory...
+Done (t=0.00s)
+creating index...
+index created!
+missing_keys:  ['decoder.ffca3.inbranch_process.1.weight', 'decoder.ffca3.inbranch_process.1.bias', 'decoder.ffca3.fc.weight', 'decoder.ffca3.fc.bias', 'decoder.ffca3.output.0.weight', 'decoder.ffca3.output.0.bias', 'decoder.ffca2.inbranch_process.1.weight', 'decoder.ffca2.inbranch_process.1.bias', 'decoder.ffca2.fc.weight', 'decoder.ffca2.fc.bias', 'decoder.ffca2.output.0.weight', 'decoder.ffca2.output.0.bias', 'decoder.ffca1.inbranch_process.1.weight', 'decoder.ffca1.inbranch_process.1.bias', 'decoder.ffca1.fc.weight', 'decoder.ffca1.fc.bias', 'decoder.ffca1.output.0.weight', 'decoder.ffca1.output.0.bias', 'final_layer.weight', 'final_layer.bias']
+ unexpected_keys:  []
+Epoch: [0]  [ 0/29]  eta: 0:01:20  lr: 0.000033  loss: 0.2556 (0.2556)  time: 2.7826  data: 1.4091  max mem: 20922
+Epoch: [0]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0066 (0.0552)  time: 0.4054  data: 0.0001  max mem: 21113
+Epoch: [0] Total time: 0:00:14 (0.4888 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.2070 (0.2070)  time: 0.7276  data: 0.4754  max mem: 21113
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0816 (0.1518)  time: 0.3210  data: 0.1189  max mem: 21113
+Test:  Total time: 0:00:01 (0.3289 s / it)
+Averaged stats: model_time: 0.0816 (0.1518)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.000
+mean abs error:
+ SC=  694.927200812567
+ S1=  526.5609217151977
+ F1C=  474.01454492236587
+ F2C=  459.2857278665791
+val_loss:  0.007068576756864786
+Epoch: [1]  [ 0/29]  eta: 0:00:43  lr: 0.000900  loss: 0.0063 (0.0063)  time: 1.5083  data: 0.8323  max mem: 21117
+Epoch: [1]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0053 (0.0059)  time: 0.3976  data: 0.0001  max mem: 21117
+Epoch: [1] Total time: 0:00:12 (0.4402 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1590 (0.1590)  time: 0.6772  data: 0.4568  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0820 (0.1398)  time: 0.3078  data: 0.1143  max mem: 21117
+Test:  Total time: 0:00:01 (0.3172 s / it)
+Averaged stats: model_time: 0.0820 (0.1398)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.000
+mean abs error:
+ SC=  466.2721370800411
+ S1=  483.8796109777952
+ F1C=  590.3695187490063
+ F2C=  574.5741288349668
+val_loss:  0.006289632525295019
+Epoch: [2]  [ 0/29]  eta: 0:00:38  lr: 0.000900  loss: 0.0060 (0.0060)  time: 1.3291  data: 0.9195  max mem: 21117
+Epoch: [2]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0055 (0.0056)  time: 0.3976  data: 0.0001  max mem: 21117
+Epoch: [2] Total time: 0:00:12 (0.4336 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1589 (0.1589)  time: 0.7180  data: 0.4980  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0819 (0.1400)  time: 0.3175  data: 0.1246  max mem: 21117
+Test:  Total time: 0:00:01 (0.3246 s / it)
+Averaged stats: model_time: 0.0819 (0.1400)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.000
+mean abs error:
+ SC=  471.43576910156224
+ S1=  492.47557867293517
+ F1C=  619.8957439381007
+ F2C=  675.8922410872802
+val_loss:  0.006270656827837229
+Epoch: [3]  [ 0/29]  eta: 0:00:42  lr: 0.000900  loss: 0.0052 (0.0052)  time: 1.4604  data: 1.0462  max mem: 21117
+Epoch: [3]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0053 (0.0056)  time: 0.4153  data: 0.0002  max mem: 21117
+Epoch: [3] Total time: 0:00:13 (0.4497 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1703 (0.1703)  time: 0.6251  data: 0.3533  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0871 (0.1496)  time: 0.3292  data: 0.0884  max mem: 21117
+Test:  Total time: 0:00:01 (0.3343 s / it)
+Averaged stats: model_time: 0.0871 (0.1496)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.001
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.010
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.001
+mean abs error:
+ SC=  383.0465308227647
+ S1=  482.8562885301256
+ F1C=  389.4446952364397
+ F2C=  523.8004021680571
+val_loss:  0.006127874832600355
+Epoch: [4]  [ 0/29]  eta: 0:00:34  lr: 0.000900  loss: 0.0055 (0.0055)  time: 1.1748  data: 0.7329  max mem: 21117
+Epoch: [4]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0055 (0.0054)  time: 0.4292  data: 0.0001  max mem: 21117
+Epoch: [4] Total time: 0:00:13 (0.4579 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1714 (0.1714)  time: 0.6246  data: 0.3459  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0871 (0.1500)  time: 0.3310  data: 0.0865  max mem: 21117
+Test:  Total time: 0:00:01 (0.3360 s / it)
+Averaged stats: model_time: 0.0871 (0.1500)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.001
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.002
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.001
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.016
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.040
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.010
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.016
+mean abs error:
+ SC=  173.3728701634043
+ S1=  400.0515075281956
+ F1C=  414.1477897026921
+ F2C=  481.15269875453646
+val_loss:  0.005961832124739885
+Epoch: [5]  [ 0/29]  eta: 0:00:31  lr: 0.000900  loss: 0.0050 (0.0050)  time: 1.0700  data: 0.6257  max mem: 21117
+Epoch: [5]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0048 (0.0052)  time: 0.4277  data: 0.0001  max mem: 21117
+Epoch: [5] Total time: 0:00:13 (0.4532 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1717 (0.1717)  time: 0.6106  data: 0.3212  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0872 (0.1500)  time: 0.3346  data: 0.0804  max mem: 21117
+Test:  Total time: 0:00:01 (0.3390 s / it)
+Averaged stats: model_time: 0.0872 (0.1500)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.339
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.041
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.105
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.209
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.540
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.120
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.209
+mean abs error:
+ SC=  179.29682833169002
+ S1=  146.23572983969655
+ F1C=  103.10285095616527
+ F2C=  158.54950935406853
+val_loss:  0.005395726766437292
+Epoch: [6]  [ 0/29]  eta: 0:00:38  lr: 0.000900  loss: 0.0047 (0.0047)  time: 1.3284  data: 0.8895  max mem: 21117
+Epoch: [6]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0044 (0.0044)  time: 0.4277  data: 0.0001  max mem: 21117
+Epoch: [6] Total time: 0:00:13 (0.4624 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1604 (0.1604)  time: 0.6589  data: 0.4328  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0818 (0.1400)  time: 0.3065  data: 0.1083  max mem: 21117
+Test:  Total time: 0:00:01 (0.3142 s / it)
+Averaged stats: model_time: 0.0818 (0.1400)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.02s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.559
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.904
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.571
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.559
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.667
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.950
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.740
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.667
+mean abs error:
+ SC=  23.81005424893751
+ S1=  38.18768880938989
+ F1C=  21.791025124466127
+ F2C=  32.42157286392098
+val_loss:  0.0047470573335886
+Epoch: [7]  [ 0/29]  eta: 0:00:35  lr: 0.000900  loss: 0.0043 (0.0043)  time: 1.2176  data: 0.8093  max mem: 21117
+Epoch: [7]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0035 (0.0038)  time: 0.3981  data: 0.0004  max mem: 21117
+Epoch: [7] Total time: 0:00:12 (0.4303 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1594 (0.1594)  time: 0.6732  data: 0.4466  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0809 (0.1395)  time: 0.3098  data: 0.1117  max mem: 21117
+Test:  Total time: 0:00:01 (0.3183 s / it)
+Averaged stats: model_time: 0.0809 (0.1395)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.02s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.824
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.989
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.910
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.824
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.865
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.940
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.865
+mean abs error:
+ SC=  11.955789350064263
+ S1=  17.64166017187594
+ F1C=  11.594715247310756
+ F2C=  20.671340261626337
+val_loss:  0.0037381029687821865
+Epoch: [8]  [ 0/29]  eta: 0:00:42  lr: 0.000900  loss: 0.0031 (0.0031)  time: 1.4572  data: 1.0497  max mem: 21117
+Epoch: [8]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0028 (0.0032)  time: 0.3976  data: 0.0001  max mem: 21117
+Epoch: [8] Total time: 0:00:12 (0.4381 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1584 (0.1584)  time: 0.6690  data: 0.4483  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0820 (0.1398)  time: 0.3086  data: 0.1121  max mem: 21117
+Test:  Total time: 0:00:01 (0.3166 s / it)
+Averaged stats: model_time: 0.0820 (0.1398)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.889
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.963
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.951
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.889
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.918
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.970
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.960
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.918
+mean abs error:
+ SC=  14.263373629657547
+ S1=  18.907236986908117
+ F1C=  10.108768436470625
+ F2C=  14.036920811701345
+val_loss:  0.0033922649454325438
+Epoch: [9]  [ 0/29]  eta: 0:00:43  lr: 0.000900  loss: 0.0028 (0.0028)  time: 1.4891  data: 1.0825  max mem: 21117
+Epoch: [9]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0027 (0.0027)  time: 0.3978  data: 0.0006  max mem: 21117
+Epoch: [9] Total time: 0:00:12 (0.4398 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1596 (0.1596)  time: 0.6490  data: 0.4258  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0817 (0.1404)  time: 0.3043  data: 0.1065  max mem: 21117
+Test:  Total time: 0:00:01 (0.3094 s / it)
+Averaged stats: model_time: 0.0817 (0.1404)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.910
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.957
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.910
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.930
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.960
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.930
+mean abs error:
+ SC=  8.708657549788404
+ S1=  10.553730302642624
+ F1C=  10.910837388697452
+ F2C=  30.910306795883056
+val_loss:  0.00332453241571784
+Epoch: [10]  [ 0/29]  eta: 0:00:38  lr: 0.000900  loss: 0.0026 (0.0026)  time: 1.3279  data: 0.9069  max mem: 21117
+Epoch: [10]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0024 (0.0024)  time: 0.3996  data: 0.0001  max mem: 21117
+Epoch: [10] Total time: 0:00:12 (0.4354 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1601 (0.1601)  time: 0.7011  data: 0.4764  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0817 (0.1405)  time: 0.3176  data: 0.1191  max mem: 21117
+Test:  Total time: 0:00:01 (0.3244 s / it)
+Averaged stats: model_time: 0.0817 (0.1405)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.933
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 1.000
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.968
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.933
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.946
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 1.000
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.970
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.946
+mean abs error:
+ SC=  9.259765499987266
+ S1=  10.189220387367994
+ F1C=  13.319145155280085
+ F2C=  13.356422740984346
+val_loss:  0.0028628383297473192
+Epoch: [11]  [ 0/29]  eta: 0:00:29  lr: 0.000900  loss: 0.0020 (0.0020)  time: 1.0118  data: 0.6047  max mem: 21117
+Epoch: [11]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0021 (0.0022)  time: 0.3989  data: 0.0001  max mem: 21117
+Epoch: [11] Total time: 0:00:12 (0.4240 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1583 (0.1583)  time: 0.7381  data: 0.5122  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0813 (0.1399)  time: 0.3264  data: 0.1281  max mem: 21117
+Test:  Total time: 0:00:01 (0.3369 s / it)
+Averaged stats: model_time: 0.0813 (0.1399)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.946
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.946
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.960
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.960
+mean abs error:
+ SC=  7.958719822255573
+ S1=  14.075689626361587
+ F1C=  9.246689692778402
+ F2C=  12.31251983143
+val_loss:  0.0027434879448264837
+Epoch: [12]  [ 0/29]  eta: 0:00:41  lr: 0.000900  loss: 0.0022 (0.0022)  time: 1.4405  data: 1.0314  max mem: 21117
+Epoch: [12]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0021 (0.0020)  time: 0.3977  data: 0.0001  max mem: 21117
+Epoch: [12] Total time: 0:00:12 (0.4375 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1587 (0.1587)  time: 0.7343  data: 0.5136  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0814 (0.1397)  time: 0.3233  data: 0.1285  max mem: 21117
+Test:  Total time: 0:00:01 (0.3322 s / it)
+Averaged stats: model_time: 0.0814 (0.1397)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.943
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.943
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.954
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.954
+mean abs error:
+ SC=  7.718210729510114
+ S1=  9.021486824330822
+ F1C=  8.719640701819388
+ F2C=  12.32881988845685
+val_loss:  0.0029486785642802715
+Epoch: [13]  [ 0/29]  eta: 0:00:36  lr: 0.000900  loss: 0.0020 (0.0020)  time: 1.2572  data: 0.8234  max mem: 21117
+Epoch: [13]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0023 (0.0020)  time: 0.4282  data: 0.0001  max mem: 21117
+Epoch: [13] Total time: 0:00:13 (0.4564 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1711 (0.1711)  time: 0.6199  data: 0.3275  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0870 (0.1498)  time: 0.3388  data: 0.0819  max mem: 21117
+Test:  Total time: 0:00:01 (0.3440 s / it)
+Averaged stats: model_time: 0.0870 (0.1498)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.949
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.949
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.961
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.961
+mean abs error:
+ SC=  6.60146633902705
+ S1=  9.35329081952878
+ F1C=  8.718828702187913
+ F2C=  11.379328836303129
+val_loss:  0.002890549134463072
+Epoch: [14]  [ 0/29]  eta: 0:00:33  lr: 0.000900  loss: 0.0022 (0.0022)  time: 1.1497  data: 0.7015  max mem: 21117
+Epoch: [14]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0018 (0.0019)  time: 0.4280  data: 0.0001  max mem: 21117
+Epoch: [14] Total time: 0:00:13 (0.4563 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1713 (0.1713)  time: 0.6597  data: 0.3678  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0870 (0.1498)  time: 0.3499  data: 0.0920  max mem: 21117
+Test:  Total time: 0:00:01 (0.3548 s / it)
+Averaged stats: model_time: 0.0870 (0.1498)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.02s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.924
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.970
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.955
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.924
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.934
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.970
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.960
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.934
+mean abs error:
+ SC=  11.29585063270779
+ S1=  12.569891118781806
+ F1C=  9.926240811901067
+ F2C=  15.862368924832545
+val_loss:  0.0026038819923996925
+Epoch: [15]  [ 0/29]  eta: 0:00:31  lr: 0.000900  loss: 0.0020 (0.0020)  time: 1.0837  data: 0.6401  max mem: 21117
+Epoch: [15]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0017 (0.0019)  time: 0.4274  data: 0.0001  max mem: 21117
+Epoch: [15] Total time: 0:00:13 (0.4538 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1711 (0.1711)  time: 0.6736  data: 0.3824  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0868 (0.1498)  time: 0.3533  data: 0.0956  max mem: 21117
+Test:  Total time: 0:00:01 (0.3587 s / it)
+Averaged stats: model_time: 0.0868 (0.1498)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.957
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.957
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.966
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.966
+mean abs error:
+ SC=  6.468490190863527
+ S1=  8.526963360450019
+ F1C=  9.36316436722745
+ F2C=  12.760649741039598
+val_loss:  0.002585055772215128
+Epoch: [16]  [ 0/29]  eta: 0:00:29  lr: 0.000900  loss: 0.0016 (0.0016)  time: 1.0148  data: 0.5701  max mem: 21117
+Epoch: [16]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0016 (0.0018)  time: 0.4028  data: 0.0001  max mem: 21117
+Epoch: [16] Total time: 0:00:12 (0.4348 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1589 (0.1589)  time: 0.6907  data: 0.4647  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0812 (0.1398)  time: 0.3151  data: 0.1162  max mem: 21117
+Test:  Total time: 0:00:01 (0.3233 s / it)
+Averaged stats: model_time: 0.0812 (0.1398)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.934
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.959
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.934
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.945
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.960
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.945
+mean abs error:
+ SC=  10.524865870183357
+ S1=  9.150095231849347
+ F1C=  17.838684623844475
+ F2C=  14.58853693268239
+val_loss:  0.0025460897013545036
+Epoch: [17]  [ 0/29]  eta: 0:00:35  lr: 0.000900  loss: 0.0019 (0.0019)  time: 1.2403  data: 0.8039  max mem: 21117
+Epoch: [17]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0017 (0.0018)  time: 0.3971  data: 0.0001  max mem: 21117
+Epoch: [17] Total time: 0:00:12 (0.4303 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1581 (0.1581)  time: 0.6908  data: 0.4651  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0810 (0.1395)  time: 0.3138  data: 0.1163  max mem: 21117
+Test:  Total time: 0:00:01 (0.3205 s / it)
+Averaged stats: model_time: 0.0810 (0.1395)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.952
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 1.000
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.980
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.952
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.963
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 1.000
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.980
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.963
+mean abs error:
+ SC=  7.661809934916696
+ S1=  9.848621373750328
+ F1C=  9.04474183566604
+ F2C=  11.015664149163952
+val_loss:  0.0023234745021909475
+Epoch: [18]  [ 0/29]  eta: 0:00:33  lr: 0.000900  loss: 0.0016 (0.0016)  time: 1.1583  data: 0.7530  max mem: 21117
+Epoch: [18]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0020 (0.0017)  time: 0.3975  data: 0.0001  max mem: 21117
+Epoch: [18] Total time: 0:00:12 (0.4288 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1588 (0.1588)  time: 0.6930  data: 0.4665  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0815 (0.1395)  time: 0.3154  data: 0.1167  max mem: 21117
+Test:  Total time: 0:00:01 (0.3237 s / it)
+Averaged stats: model_time: 0.0815 (0.1395)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.02s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.959
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 1.000
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.959
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.966
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 1.000
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.966
+mean abs error:
+ SC=  6.777039603300542
+ S1=  8.609481968009087
+ F1C=  11.187727122986775
+ F2C=  12.076133788472795
+val_loss:  0.0021319855004549026
+Epoch: [19]  [ 0/29]  eta: 0:00:33  lr: 0.000900  loss: 0.0019 (0.0019)  time: 1.1401  data: 0.7324  max mem: 21117
+Epoch: [19]  [28/29]  eta: 0:00:00  lr: 0.000900  loss: 0.0017 (0.0017)  time: 0.3972  data: 0.0001  max mem: 21117
+Epoch: [19] Total time: 0:00:12 (0.4272 s / it)
+Warning: flip is enabled but flip_pairs is not provided.
+Test:   [0/4]  eta: 0:00:02  model_time: 0.1585 (0.1585)  time: 0.6844  data: 0.4631  max mem: 21117
+Test:   [3/4]  eta: 0:00:00  model_time: 0.0806 (0.1395)  time: 0.3128  data: 0.1158  max mem: 21117
+Test:  Total time: 0:00:01 (0.3192 s / it)
+Averaged stats: model_time: 0.0806 (0.1395)
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *keypoints*
+imgId:  [801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818, 819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830, 831, 832, 833, 834, 835, 836, 837, 838, 839, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851, 852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900]  catId:  [1]
+DONE (t=0.01s).
+Accumulating evaluation results...
+DONE (t=0.00s).
+IoU metric: keypoints
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.958
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 1.000
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.958
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ] = 0.965
+ Average Recall     (AR) @[ IoU=0.50      | area=   all | maxDets= 20 ] = 1.000
+ Average Recall     (AR) @[ IoU=0.75      | area=   all | maxDets= 20 ] = 0.990
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets= 20 ] = -1.000
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets= 20 ] = 0.965
+mean abs error:
+ SC=  6.160192105063929
+ S1=  8.89880582167274
+ F1C=  11.030388161129297
+ F2C=  13.514751483415923
+val_loss:  0.0023871862795203924
+[34m[1mwandb[39m[22m: [33mWARNING[39m Calling wandb.run.save without any arguments is deprecated.Changes to attributes are automatically persisted.
