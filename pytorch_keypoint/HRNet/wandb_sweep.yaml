@@ -15,9 +15,9 @@ parameters:
   with_FFCA:
     value: [True, False]
   fixed-size:
-    value: [[512,512],[256,256],[128,128],[64,64]]
+    value: [512,256,128,64]
   lr-steps:
-    value: [[50,100],[100,150],]
+    value: [50, 100, 150, 200]
   weight-decay:
     min: 0.00005
     max: 0.0005

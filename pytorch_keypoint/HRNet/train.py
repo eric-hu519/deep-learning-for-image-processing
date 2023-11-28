@@ -352,7 +352,7 @@ if __name__ == "__main__":
                         help='person_keypoints.json path')
     # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
     parser.add_argument('--person-det', type=str, default=None)
-    parser.add_argument('--fixed-size', default=[512, 512], nargs='+', type=int, help='input size')
+    parser.add_argument('--fixed-size', default=512, nargs='+', type=int, help='input size')
     # keypoints点数
     parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
     # 文件保存地址
@@ -365,7 +365,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', default=20, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-steps', default=[100, 150], nargs='+', type=int, help='decrease lr every step-size epochs')
+    parser.add_argument('--lr-steps', default=100, nargs='+', type=int, help='decrease lr every step-size epochs')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
     parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率
@@ -391,4 +391,6 @@ if __name__ == "__main__":
     # 检查保存权重文件夹是否存在，不存在则创建
     args.output_dir = increment_path(Path(args.output_dir), exist_ok=False,mkdir=True)
     args.log_path = increment_path(Path(args.log_path), exist_ok=False,mkdir=True)
+    args.fixed_size = [args.fixed_size, args.fixed_size]
+    args.lr_steps = [args.lr_steps, args.lr_steps+50]
     main(args)
