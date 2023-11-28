@@ -1,4 +1,6 @@
 ##ignore this file##
+#
+pytorch_keypoint/HRNet/wandb/*
 *.idea
 __pycache__
 *.zip
