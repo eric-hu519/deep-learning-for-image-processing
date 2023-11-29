@@ -22,16 +22,16 @@ def predict_single_person():
     #翻转图片，提高精度
     flip_test = True
     #输入图片大小
-    resize_hw = (256, 192)
-    img_path = "./person.png"
-    weights_path = "./pose_hrnet_w32_256x192.pth"
-    keypoint_json_path = "person_keypoints.json"
+    resize_hw = (256, 256)
+    img_path = "./datasets/images/test/901.jpg"
+    weights_path = "./save_weights/exp37/best_model-399.pth"
+    keypoint_json_path = "./spinopelvic_keypoints.json"
     assert os.path.exists(img_path), f"file: {img_path} does not exist."
     assert os.path.exists(weights_path), f"file: {weights_path} does not exist."
     assert os.path.exists(keypoint_json_path), f"file: {keypoint_json_path} does not exist."
 
     data_transform = transforms.Compose([
-        transforms.AffineTransform(scale=(1.25, 1.25), fixed_size=resize_hw),
+        transforms.AffineTransform(scale=(1.2, 1.2), fixed_size=resize_hw),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
@@ -42,7 +42,7 @@ def predict_single_person():
 
     # read single-person image
     img = cv2.imread(img_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)#convert to RGB
+    #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)#convert to RGB
     # record original image size
     img_tensor, target = data_transform(img, {"box": [0, 0, img.shape[1] - 1, img.shape[0] - 1]})
     img_tensor = torch.unsqueeze(img_tensor, dim=0)
