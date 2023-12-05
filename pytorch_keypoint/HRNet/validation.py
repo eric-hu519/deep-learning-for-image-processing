@@ -138,12 +138,16 @@ def main(args):
     # 载入你自己训练好的模型权重
     weights_path = args.weights_path
     assert os.path.exists(weights_path), "not found {} file.".format(weights_path)
-    model.load_state_dict(torch.load(weights_path, map_location='cpu'))
+    weights = model.load_state_dict(torch.load(weights_path, map_location='cpu'))
     # print(model)
+    
+    weights = torch.load(weights_path, map_location=device)
+    weights = weights if "model" not in weights else weights["model"]
+    model.load_state_dict(weights)
     model.to(device)
-
     # evaluate on the val dataset
     key_metric = EvalCOCOMetric(val_dataset.coco, "keypoints", "key_results.json")
+    
     model.eval()
     with torch.no_grad():
         for images, targets in tqdm(val_dataset_loader, desc="validation..."):
@@ -190,7 +194,7 @@ if __name__ == "__main__":
     parser.add_argument('--data-path', default='datasets', help='dataset root')
 
     # 训练好的权重文件
-    parser.add_argument('--weights-path', default='./save_weights/model-209.pth', type=str, help='training weights')
+    parser.add_argument('--weights-path', default='./save_weights/exp55/best_model-175.pth', type=str, help='training weights')
 
     # batch size
     parser.add_argument('--batch-size', default=1, type=int, metavar='N',

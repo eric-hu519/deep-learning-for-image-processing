@@ -80,6 +80,13 @@ def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
         missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
         if len(missing_keys) != 0:
             print("missing_keys: ", missing_keys, "\n", "unexpected_keys: ", unexpected_keys)
+            # 添加缺失的权重和偏置
+            #for key in missing_keys:
+                #if 'weight' in key:
+                    #torch.nn.init.kaiming_normal_(model.state_dict()[key], mode='fan_out', nonlinearity='relu')
+                #elif 'bias' in key:
+                    #model.state_dict()[key].zero_()
+        
 
     return model
 
@@ -188,13 +195,7 @@ def main(args):
     # define optimizer
     params = [p for p in model.parameters() if p.requires_grad]
     #define adam as optimizer
-    if args.optimizer == "SGD":
-        optimizer = torch.optim.SGD(params,
-                                    lr=args.lr,
-                                    momentum=0.9,
-                                    weight_decay=args.weight_decay)
-    else:
-        optimizer = torch.optim.AdamW(params,
+    optimizer = torch.optim.AdamW(params,
                                   lr=args.lr,
                                   weight_decay=args.weight_decay)
 
@@ -352,7 +353,7 @@ if __name__ == "__main__":
                         help='person_keypoints.json path')
     # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
     parser.add_argument('--person-det', type=str, default=None)
-    parser.add_argument('--fixed-size', default=512, nargs='+', type=int, help='input size')
+    parser.add_argument('--fixed-size', default=[256,256], nargs='+', type=int, help='input size')
     # keypoints点数
     parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
     # 文件保存地址
@@ -362,18 +363,18 @@ if __name__ == "__main__":
     # 指定接着从哪个epoch数开始训练
     parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
     # 训练的总epoch数
-    parser.add_argument('--epochs', default=20, type=int, metavar='N',
+    parser.add_argument('--epochs', default=200, type=int, metavar='N',
                         help='number of total epochs to run')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-steps', default=100, nargs='+', type=int, help='decrease lr every step-size epochs')
+    parser.add_argument('--lr-steps', default=[150, 200], nargs='+', type=int, help='decrease lr every step-size epochs')
     # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
+    parser.add_argument('--lr-gamma', default=0.3258, type=float, help='decrease lr by a factor of lr-gamma')
     # 学习率
-    parser.add_argument('--lr', default=0.0009, type=float,
+    parser.add_argument('--lr', default=0.00188, type=float,
                         help='initial learning rate, 0.02 is the default value for training '
                              'on 8 gpus and 2 images_per_gpu')
     # AdamW的weight_decay参数
-    parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
+    parser.add_argument('--wd', '--weight-decay', default=1.87e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)',
                         dest='weight_decay')
     # 训练的batch size
@@ -391,8 +392,8 @@ if __name__ == "__main__":
     # 检查保存权重文件夹是否存在，不存在则创建
     args.output_dir = increment_path(Path(args.output_dir), exist_ok=False,mkdir=True)
     args.log_path = increment_path(Path(args.log_path), exist_ok=False,mkdir=True)
-    args.fixed_size = [args.fixed_size[0], args.fixed_size[0]]
-    steps = args.lr_steps[0]
-    next_steps = steps + 50
-    args.lr_steps = [steps, next_steps]
+    #args.fixed_size = [args.fixed_size[0], args.fixed_size[0]]
+    #steps = args.lr_steps[0]
+    #next_steps = steps + 50
+    #args.lr_steps = [steps, next_steps]
     main(args)

@@ -327,10 +327,11 @@ class myFFCA(nn.Module):
 
         self.fc = nn.Linear(self.low_channle, self.low_channle//2)
         self.sigmoid = nn.Sigmoid()
+        self.relu = nn.ReLU(inplace=True)
         self.output = nn.Sequential(
             #3*3conv
             nn.Conv2d(self.low_channle, self.high_channle,3,padding=1),
-            nn.ReLU(inplace=True)
+            self.sigmoid
         )
     def forward(self, low_branch, high_branch):
         up_lowbranch = self.inbranch_process(low_branch)
@@ -344,7 +345,7 @@ class myFFCA(nn.Module):
         avgpooled_branch_flat = avgpooled_branch.view(avgpooled_branch.size(0), -1)
 
         # Pass the tensors through the fully connected layer
-        feature_weight = self.sigmoid(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
+        feature_weight = self.relu(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
         #restore the size of weight from[batch_size, channel] to [batch_size, channel, 1, 1]
         feature_weight = feature_weight.view(feature_weight.size(0), feature_weight.size(1), 1, 1)
 

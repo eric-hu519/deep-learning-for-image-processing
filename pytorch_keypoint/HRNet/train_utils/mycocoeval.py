@@ -158,6 +158,8 @@ class COCOeval:
         evaluateImg = self.evaluateImg
         #计算各点的平均误差值
         self.error = np.array(self.error)
+        #save error to txt
+        #np.savetxt('error.txt',self.error)
         self.error = np.mean(self.error, axis=0)#按列求平均值
         maxDet = p.maxDets[-1]
         self.evalImgs = [evaluateImg(imgId, catId, areaRng, maxDet)

@@ -18,7 +18,7 @@ class CocoKeypoint(data.Dataset):
                  fixed_size=(256, 192)):
         super().__init__()
         
-        assert dataset in ["train", "val"], 'dataset must be in ["train", "val"]'
+        assert dataset in ["train", "val", "test"], 'dataset must be in ["train", "val", "test"]'
         anno_file = f"{dataset}_converted.json"
         assert os.path.exists(root), "file '{}' does not exist.".format(root)
         self.img_root = os.path.join(root,"images", f"{dataset}")

@@ -24,7 +24,7 @@ def predict_single_person():
     #输入图片大小
     resize_hw = (256, 256)
     img_path = "./datasets/images/test/901.jpg"
-    weights_path = "./save_weights/exp37/best_model-399.pth"
+    weights_path = "./save_weights/exp55/best_model-175.pth"
     keypoint_json_path = "./spinopelvic_keypoints.json"
     assert os.path.exists(img_path), f"file: {img_path} does not exist."
     assert os.path.exists(weights_path), f"file: {weights_path} does not exist."

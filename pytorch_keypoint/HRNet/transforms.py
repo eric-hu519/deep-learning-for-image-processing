@@ -436,8 +436,8 @@ class KeypointToHeatMap(object):
 
         if self.use_kps_weights:
             kps_weights = np.multiply(kps_weights, self.kps_weights)
-
-        # plot_heatmap(image, heatmap, kps, kps_weights)
+        #plot heatmaps, NOTE: this will generatte tons of heatmaps in the loop
+        #plot_heatmap(image, heatmap, kps, kps_weights)
 
         target["heatmap"] = torch.as_tensor(heatmap, dtype=torch.float32)
         target["kps_weights"] = torch.as_tensor(kps_weights, dtype=torch.float32)
