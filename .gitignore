@@ -1,6 +1,6 @@
 ##ignore this file##
 #
-pytorch_keypoint/HRNet/wandb/*
+HRNet/wandb/*
 *.idea
 __pycache__
 *.zip
@@ -22,4 +22,6 @@ checkpoint
 data
 VOCdevkit
 ssd_resnet50_v1_fpn_shared_box_predictor
-pytorch_keypoint/HRNet/runs/*
+HRNet/runs/*
+HRNet/save_weights/*
+HRNet/tests/*
