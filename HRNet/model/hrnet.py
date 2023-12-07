@@ -164,10 +164,13 @@ class StageModule(nn.Module):
 
 #num_joints,表示关节点个数
 class HighResolutionNet(nn.Module):
-    def __init__(self, base_channel: int = 32, num_joints: int = 4, with_FFCA = True):
+    def __init__(self, base_channel: int = 32, num_joints: int = 4, with_FFCA = True, spatial_attention = True, skip_connection = True):
         super().__init__()
         # Stem
         self.with_FFCA = with_FFCA
+        self.skip_connection = skip_connection
+        self.spatial_attention = spatial_attention
+
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1, bias=False)
@@ -255,6 +258,8 @@ class HighResolutionNet(nn.Module):
             #StageModule(input_branches=4, output_branches=1, c=base_channel)
         )
 
+        if spatial_attention:
+            self.spatial_attention = SPAtt()
         if not with_FFCA:
             self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel))
         else:
@@ -272,14 +277,17 @@ class HighResolutionNet(nn.Module):
         x = self.relu(x)
 
         x = self.layer1(x)
+        skip_1 = x  # 用于后续的skip connection
         x = [trans(x) for trans in self.transition1]  # Since now, x is a list
 
+        skip_2 = x[1]  # 用于后续的skip connection
         x = self.stage2(x)
         x = [
             self.transition2[0](x[0]),
             self.transition2[1](x[1]),
             self.transition2[2](x[-1])
         ]  # New branch derives from the "upper" branch only
+        skip_3 = x[2]  # 用于后续的skip connection
 
         x = self.stage3(x)
         x = [
@@ -289,8 +297,25 @@ class HighResolutionNet(nn.Module):
             self.transition3[3](x[-1]),
         ]  # New branch derives from the "upper" branch only
 
+        skip_4 = x[3]  # 用于后续的skip connection
+
         x = self.stage4(x)
         #print("x[0]: ", x[0].shape, "\n", "x[1]: ", x[1].shape, "\n", "x[2]: ", x[2].shape, "\n", "x[3]: ", x[3].shape, "\n")
+        if self.skip_connection & self.spatial_attention: 
+        #conbine skip connection
+            skip_1 = skip_1 + x[0]
+            skip_2 = skip_2 + x[1]
+            skip_3 = skip_3 + x[2]
+            skip_4 = skip_4 + x[3]
+            x[0] = x[0] * self.spatial_attention(skip_1)
+            x[1] = x[1] * self.spatial_attention(skip_2)
+            x[2] = x[2] * self.spatial_attention(skip_3)
+            x[3] = x[3] * self.spatial_attention(skip_4)
+        elif self.skip_connection &  (not self.spatial_attention):
+            x[0] = x[0] + skip_1
+            x[1] = x[1] + skip_2
+            x[2] = x[2] + skip_3
+            x[3] = x[3] + skip_4
         if self.with_FFCA:
             x = self.decoder(x)
             x = self.final_layer(x)
@@ -376,3 +401,23 @@ class myDecoder(nn.Module):
         ffca_output = self.ffca3(ffca_output, branch3)
 
         return ffca_output
+
+class SPAtt(nn.Module):
+    """
+    Spatial Attention Module
+    """
+    def __init__(self):
+        super().__init__()
+        self.max_pool = nn.MaxPool2d(kernel_size=(1, 1))
+        self.avg_pool = nn.AvgPool2d(kernel_size=(1, 1))
+        self.con1 = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        max_out = self.max_pool(x)
+        avg_out = self.avg_pool(x)
+        out = torch.cat([max_out, avg_out], dim=1)
+        out = self.con1(out)
+        out = self.sigmoid(out)
+        return out
+

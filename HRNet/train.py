@@ -12,7 +12,7 @@ from model import HighResolutionNet
 from my_dataset_coco import CocoKeypoint
 from train_utils import train_eval_utils as utils
 import wandb
-#TODO: make log folder and model save folder runs/exp get the  same number
+
 def wandb_init(args):
     wandb.init(project="spinopelvic", config=args)
     wandb.run.name = str(args.log_path).split('/')[-1]
@@ -99,16 +99,21 @@ def check_loss_list(loss_list, loss):
     else:
         return False
 
-def increment_path(path, exist_ok=False, sep='', mkdir=False):
+def increment_path(path,refer_path, exist_ok=False, sep='', mkdir=False):
     # Increment file or directory path, i.e. runs/exp --> runs/exp{sep}2, runs/exp{sep}3, ... etc.
     path = Path(path)  # os-agnostic
+    refer_path = Path(refer_path)
     if path.exists() and not exist_ok:
         suffix = path.suffix
         path = path.with_suffix('')
         dirs = glob.glob(f"{path}{sep}*")  # similar paths
         matches = [re.search(rf"%s{sep}(\d+)" % path.stem, d) for d in dirs]
+        ref_matches = [re.search(rf"%s{sep}(\d+)" % refer_path.stem, d) for d in dirs]
+        ref_i = [int(m.groups()[0]) for m in ref_matches if m]  # indices
+        ref_n = max(ref_i) + 1 if ref_i else 2  # increment number
         i = [int(m.groups()[0]) for m in matches if m]  # indices
         n = max(i) + 1 if i else 2  # increment number
+        n = max(n, ref_n)#keep the weight file number same as the log file number
         path = Path(f"{path}{sep}{n}{suffix}")  # update path
     dir = path if path.suffix == '' else path.parent  # directory
     if not dir.exists() and mkdir:
@@ -390,10 +395,11 @@ if __name__ == "__main__":
     print(args)
 
     # 检查保存权重文件夹是否存在，不存在则创建
-    args.output_dir = increment_path(Path(args.output_dir), exist_ok=False,mkdir=True)
-    args.log_path = increment_path(Path(args.log_path), exist_ok=False,mkdir=True)
+    args.output_dir = increment_path(Path(args.output_dir),Path(args.log_path), exist_ok=False,mkdir=True)
+    args.log_path = increment_path(Path(args.log_path),Path(args.outpur_dir), exist_ok=False,mkdir=True)
     #args.fixed_size = [args.fixed_size[0], args.fixed_size[0]]
     #steps = args.lr_steps[0]
     #next_steps = steps + 50
     #args.lr_steps = [steps, next_steps]
     main(args)
+
