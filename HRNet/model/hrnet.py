@@ -277,9 +277,11 @@ class HighResolutionNet(nn.Module):
         x = self.relu(x)
 
         x = self.layer1(x)
-        skip_1 = x  # 用于后续的skip connection
-        x = [trans(x) for trans in self.transition1]  # Since now, x is a list
 
+         # 用于后续的skip connection
+        x = [trans(x) for trans in self.transition1]  # Since now, x is a list
+        #print("x.shape: ", x[0].shape)
+        skip_1 = x[0]
         skip_2 = x[1]  # 用于后续的skip connection
         x = self.stage2(x)
         x = [
@@ -408,14 +410,13 @@ class SPAtt(nn.Module):
     """
     def __init__(self):
         super().__init__()
-        self.max_pool = nn.MaxPool2d(kernel_size=(1, 1))
-        self.avg_pool = nn.AvgPool2d(kernel_size=(1, 1))
         self.con1 = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        max_out = self.max_pool(x)
-        avg_out = self.avg_pool(x)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        #print("avg_out.shape: ", avg_out.shape)
         out = torch.cat([max_out, avg_out], dim=1)
         out = self.con1(out)
         out = self.sigmoid(out)

@@ -123,8 +123,9 @@ def increment_path(path,refer_path, exist_ok=False, sep='', mkdir=False):
 
 def main(args):
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
-    wandb.login()
-    wandb_init(args)
+    if not args.debug:
+        wandb.login()
+        wandb_init(args)
 
 
 
@@ -284,7 +285,8 @@ def main(args):
             best_err[3] = fh2_abs_error[-1]
 
         is_save = check_loss_list(val_loss, val_loss[-1])
-        wandb_log(epoch, train_loss[-1], coco_info, best_err)
+        if not args.debug:
+            wandb_log(epoch, train_loss[-1], coco_info, best_err)
         # save weights
         save_files = {
             'model': model.state_dict(),
@@ -391,6 +393,7 @@ if __name__ == "__main__":
     parser.add_argument("--log-path", default = "./runs/exp", help="log path")
     parser.add_argument("--with_FFCA", default= True , help="enable FFCA")
     parser.add_argument("--optimizer", default="adamw", help="optimizer")
+    parser.add_argument("--debug", default= False , help="debug mode")
     args = parser.parse_args()
     print(args)
 
