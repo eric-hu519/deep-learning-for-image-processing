@@ -169,7 +169,7 @@ class HighResolutionNet(nn.Module):
         # Stem
         self.with_FFCA = with_FFCA
         self.skip_connection = skip_connection
-        self.spatial_attention = spatial_attention
+        self.with_spacial = spatial_attention
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
@@ -258,7 +258,7 @@ class HighResolutionNet(nn.Module):
             #StageModule(input_branches=4, output_branches=1, c=base_channel)
         )
 
-        if spatial_attention:
+        if self.with_spacial:
             self.spatial_attention = SPAtt()
         if not with_FFCA:
             self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel))
@@ -301,7 +301,7 @@ class HighResolutionNet(nn.Module):
 
         x = self.stage4(x)
         #print("x[0]: ", x[0].shape, "\n", "x[1]: ", x[1].shape, "\n", "x[2]: ", x[2].shape, "\n", "x[3]: ", x[3].shape, "\n")
-        if self.skip_connection & self.spatial_attention: 
+        if self.skip_connection & self.with_spacial: 
         #conbine skip connection
             skip_1 = skip_1 + x[0]
             skip_2 = skip_2 + x[1]
@@ -311,7 +311,7 @@ class HighResolutionNet(nn.Module):
             x[1] = x[1] * self.spatial_attention(skip_2)
             x[2] = x[2] * self.spatial_attention(skip_3)
             x[3] = x[3] * self.spatial_attention(skip_4)
-        elif self.skip_connection &  (not self.spatial_attention):
+        elif self.skip_connection &  (not self.with_spacial):
             x[0] = x[0] + skip_1
             x[1] = x[1] + skip_2
             x[2] = x[2] + skip_3

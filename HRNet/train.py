@@ -396,7 +396,7 @@ if __name__ == "__main__":
 
     # 检查保存权重文件夹是否存在，不存在则创建
     args.output_dir = increment_path(Path(args.output_dir),Path(args.log_path), exist_ok=False,mkdir=True)
-    args.log_path = increment_path(Path(args.log_path),Path(args.outpur_dir), exist_ok=False,mkdir=True)
+    args.log_path = increment_path(Path(args.log_path),Path(args.output_dir), exist_ok=False,mkdir=True)
     #args.fixed_size = [args.fixed_size[0], args.fixed_size[0]]
     #steps = args.lr_steps[0]
     #next_steps = steps + 50
