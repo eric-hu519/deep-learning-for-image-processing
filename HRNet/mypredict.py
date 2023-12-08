@@ -36,7 +36,7 @@ def main(args):
     
     #create model
     model = HighResolutionNet(base_channel=32)
-    weights = torch.load("./save_weights/exp134/best_model-127.pth", map_location=device)
+    weights = torch.load("./save_weights/exp142/best_model-166.pth", map_location=device)
     weights = weights if "model" not in weights else weights["model"]
     model.load_state_dict(weights)
 

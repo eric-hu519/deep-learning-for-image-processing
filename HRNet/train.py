@@ -128,7 +128,9 @@ def main(args):
         wandb_init(args)
 
 
-
+    torch.manual_seed(3407)
+    torch.cuda.manual_seed(3407)
+    np.random.seed(3407)
 
     # 用来保存coco_info的文件
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
