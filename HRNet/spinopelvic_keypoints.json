@@ -1,6 +1,6 @@
 {
     "keypoints": ["pelvis","l_hip","r_hip","spine"],
-    "kps_weights": [1.0, 1.0, 1.0, 1.0],
+    "kps_weights": [2.0, 2.5, 3.0, 3.0],
     "upper_body_ids": [0, 1],
     "lower_body_ids": [2,3]
 }

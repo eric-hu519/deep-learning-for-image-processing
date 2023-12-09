@@ -12,10 +12,10 @@ from model import HighResolutionNet
 from my_dataset_coco import CocoKeypoint
 from train_utils import train_eval_utils as utils
 import wandb
-
+import mypredict
 def wandb_init(args):
     wandb.init(project="spinopelvic", config=args)
-    wandb.run.name = str(args.log_path).split('/')[-1]
+    wandb.run.name = str(args.output_dir).split('/')[-1]
     #wandb.run.save()
     wandb.watch_called = False
 
@@ -99,21 +99,16 @@ def check_loss_list(loss_list, loss):
     else:
         return False
 
-def increment_path(path,refer_path, exist_ok=False, sep='', mkdir=False):
+def increment_path(path, exist_ok=False, sep='', mkdir=False):
     # Increment file or directory path, i.e. runs/exp --> runs/exp{sep}2, runs/exp{sep}3, ... etc.
     path = Path(path)  # os-agnostic
-    refer_path = Path(refer_path)
     if path.exists() and not exist_ok:
         suffix = path.suffix
         path = path.with_suffix('')
         dirs = glob.glob(f"{path}{sep}*")  # similar paths
         matches = [re.search(rf"%s{sep}(\d+)" % path.stem, d) for d in dirs]
-        ref_matches = [re.search(rf"%s{sep}(\d+)" % refer_path.stem, d) for d in dirs]
-        ref_i = [int(m.groups()[0]) for m in ref_matches if m]  # indices
-        ref_n = max(ref_i) + 1 if ref_i else 2  # increment number
         i = [int(m.groups()[0]) for m in matches if m]  # indices
         n = max(i) + 1 if i else 2  # increment number
-        n = max(n, ref_n)#keep the weight file number same as the log file number
         path = Path(f"{path}{sep}{n}{suffix}")  # update path
     dir = path if path.suffix == '' else path.parent  # directory
     if not dir.exists() and mkdir:
@@ -127,12 +122,12 @@ def main(args):
         wandb.login()
         wandb_init(args)
 
-
+    #set random seed
     torch.manual_seed(3407)
     torch.cuda.manual_seed(3407)
     np.random.seed(3407)
 
-    # 用来保存coco_info的文件
+    # save coco_info
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
     with open(args.keypoints_path, "r") as f:
@@ -262,9 +257,9 @@ def main(args):
         #    os.makedirs("./runs")
         # 将实验结果写入txt，保存在runs文件夹下
         if args.with_FFCA:
-            results_file = "{}/withFFCA_results.txt".format(args.log_path)  # 修改保存结果的文件路径为"./runs/results.txt"
+            results_file = "{}/withFFCA_results.txt".format(args.output_dir)  # 修改保存结果的文件路径为"./runs/results.txt"
         else:
-            results_file = "{}/noFFCA_results.txt".format(args.log_path)
+            results_file = "{}/noFFCA_results.txt".format(args.output_dir)
         with open(results_file, "a") as f:
             # 写入的数据包括coco指标还有loss和learning rate
             result_info = [f"{i:.4f}" for i in coco_info + [mean_loss.item()]] + [f"{lr:.6f}"]
@@ -319,28 +314,29 @@ def main(args):
         "lr_steps": args.lr_steps,
         # 添加其他训练参数...
     }
-    wandb.run.save()
-    wandb.finish()
-    with open("{}/train_config.txt".format(args.log_path), "w") as f:
+    if not args.debug:
+        wandb.run.save()
+        wandb.finish()
+    with open("{}/train_config.txt".format(args.output_dir), "w") as f:
         for key, value in train_params.items():
             f.write(f"{key}: {value}\n")
 
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         from plot_curve import plot_loss_and_lr
-        plot_loss_and_lr(train_loss, val_loss, learning_rate,str(args.log_path))
+        plot_loss_and_lr(train_loss, val_loss, learning_rate,str(args.output_dir))
 
     # plot mAP curve
     if len(val_map) != 0:
         from plot_curve import plot_map
-        plot_map(val_map,str(args.log_path))
+        plot_map(val_map,str(args.output_dir))
     #plot abs error curve
     if len(sc_abs_error) != 0:
         from plot_curve import plot_abs_error
-        plot_abs_error(sc_abs_error,'sc',str(args.log_path))
-        plot_abs_error(s1_abs_error,'s1',str(args.log_path))
-        plot_abs_error(fh1_abs_error,'fh1',str(args.log_path))
-        plot_abs_error(fh2_abs_error,'fh2',str(args.log_path))
+        plot_abs_error(sc_abs_error,'sc',str(args.output_dir))
+        plot_abs_error(s1_abs_error,'s1',str(args.output_dir))
+        plot_abs_error(fh1_abs_error,'fh1',str(args.output_dir))
+        plot_abs_error(fh2_abs_error,'fh2',str(args.output_dir))
     if len(best_err) != 0:
         print("min_sc_e: ",best_err[0],"\n",
               "min_s1_e: ",best_err[1],"\n",
@@ -395,13 +391,13 @@ if __name__ == "__main__":
     parser.add_argument("--log-path", default = "./runs/exp", help="log path")
     parser.add_argument("--with_FFCA", default= True , help="enable FFCA")
     parser.add_argument("--optimizer", default="adamw", help="optimizer")
-    parser.add_argument("--debug", default= False , help="debug mode")
+    parser.add_argument("--debug", default= True , help="debug mode")
     args = parser.parse_args()
     print(args)
 
     # 检查保存权重文件夹是否存在，不存在则创建
-    args.output_dir = increment_path(Path(args.output_dir),Path(args.log_path), exist_ok=False,mkdir=True)
-    args.log_path = increment_path(Path(args.log_path),Path(args.output_dir), exist_ok=False,mkdir=True)
+    args.output_dir = increment_path(Path(args.output_dir), exist_ok=False,mkdir=True)
+    #args.output_dir = increment_path(Path(args.output_dir),Path(args.output_dir), exist_ok=False,mkdir=False)
     #args.fixed_size = [args.fixed_size[0], args.fixed_size[0]]
     #steps = args.lr_steps[0]
     #next_steps = steps + 50

@@ -399,7 +399,8 @@ class KeypointToHeatMap(object):
         if "visible" in target:
             visible = target["visible"]
             kps_weights = visible
-
+            if 0.0 in visible:
+                print("There are values of 0.0 in 'visible' of target. img_id:", target.get("img_id"))
         heatmap = np.zeros((num_kps, self.heatmap_hw[0], self.heatmap_hw[1]), dtype=np.float32)
         heatmap_kps = (kps / 4 + 0.5).astype(int)  # round
         for kp_id in range(num_kps):

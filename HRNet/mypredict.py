@@ -36,7 +36,7 @@ def main(args):
     
     #create model
     model = HighResolutionNet(base_channel=32)
-    weights = torch.load("./save_weights/exp142/best_model-166.pth", map_location=device)
+    weights = torch.load("./save_weights/exp97/best_model-152.pth", map_location=device)
     weights = weights if "model" not in weights else weights["model"]
     model.load_state_dict(weights)
 
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                         help='person_keypoints.json path')
     # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
     parser.add_argument('--person-det', type=str, default=None)
-    parser.add_argument('--fixed-size', default=[512,512], nargs='+', type=int, help='input size')
+    parser.add_argument('--fixed-size', default=[256,256], nargs='+', type=int, help='input size')
     # keypoints点数
     parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
     # 文件保存地址
