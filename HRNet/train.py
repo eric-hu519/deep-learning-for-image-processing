@@ -115,7 +115,43 @@ def increment_path(path, exist_ok=False, sep='', mkdir=False):
         dir.mkdir(parents=True, exist_ok=True)  # make directory
     return path
 
-
+#config for wandb sweep
+def sweep_override(args):
+    #limit_batch to avoid cuda overdrive
+    if args.fixed_size < 512:
+        args.batch_size = 32 
+    elif args.fixed_size == 512 :
+        args.batch_size = 28
+    elif args.fixed_size > 512 :
+        args.batch_size = 16
+    #adjust lr scheme according to args
+    if args.lr_steps == 1:
+        stage1 = round((args.epochs-1) * 0.25)
+        stage2 = round((args.epochs-1) * 0.5)
+        args.lr_steps = [stage1,stage2]
+    elif args.lr_steps == 2:
+        stage1 = round((args.epochs-1) * 0.5)
+        stage2 = round((args.epochs-1) * 0.75)
+        args.lr_steps = [stage1,stage2]
+    elif args.lr_steps == 3:
+        stage1 = round((args.epochs-1) * 0.25)
+        stage2 = round((args.epochs-1) * 0.75)
+        args.lr_steps = [stage1,stage2]
+    elif args.lr_steps == 4:
+        stage1 = round((args.epochs-1) * 0.5)
+        stage2 = args.epoch-1
+        args.lr_steps = [stage1,stage2]
+    elif args.lr_steps == 5:
+        stage1 = round((args.epochs-1) * 0.75)
+        stage2 = args.epoch-1
+        args.lr_steps = [stage1,stage2]
+    elif args.lr_steps == 6:
+        stage1 = round((args.epochs-1) * 0.25)
+        stage2 = args.epoch-1
+        args.lr_steps = [stage1,stage2]
+    return args
+    
+    
 def main(args):
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     if not args.debug:
