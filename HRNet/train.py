@@ -10,6 +10,7 @@ import glob
 import transforms
 from model import HighResolutionNet
 from my_dataset_coco import CocoKeypoint
+from mydataset_kfold import myKeypoint
 from train_utils import train_eval_utils as utils
 import wandb
 import mypredict
@@ -115,6 +116,14 @@ def increment_path(path, exist_ok=False, sep='', mkdir=False):
         dir.mkdir(parents=True, exist_ok=True)  # make directory
     return path
 
+#def splitdataset(kfold = 10, data_root, data_transform):
+    dataset = CocoKeypoint(data_root, "train", transforms=data_transform["train"], fixed_size=args.fixed_size)
+
+
+
+
+
+
 #config for wandb sweep
 def sweep_override(args):
     #limit_batch to avoid cuda overdrive
@@ -196,12 +205,19 @@ def main(args):
         ])
     }
 
+
     data_root = args.data_path
 
     # load train data set
     # coco2017 -> annotations -> person_keypoints_train2017.json
-    train_dataset = CocoKeypoint(data_root, "train", transforms=data_transform["train"], fixed_size=args.fixed_size)
-
+    #get all dataset
+    dataset = myKeypoint(data_root, "allanno", transforms=None, fixed_size=args.fixed_size)
+    #split dataset with kfold
+    train_dataset, val_dataset = dataset.splitdataset(kfold = 10)
+    #transform datasets after split
+    train_dataset.transform = data_transform["train"]
+    val_dataset.transform = data_transform["val"]
+    
     # 注意这里的collate_fn是自定义的，因为读取的数据包括image和targets，不能直接使用默认的方法合成batch
     batch_size = args.batch_size
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers
@@ -216,8 +232,8 @@ def main(args):
     #instance dataset
     # load validation data set
     # coco2017 -> annotations -> person_keypoints_val2017.json
-    val_dataset = CocoKeypoint(data_root, "val", transforms=data_transform["val"], fixed_size=args.fixed_size,
-                               det_json_path=args.person_det)
+    #val_dataset = CocoKeypoint(data_root, "val", transforms=data_transform["val"], fixed_size=args.fixed_size,
+                               #det_json_path=args.person_det)
     val_data_loader = data.DataLoader(val_dataset,
                                       batch_size=batch_size,
                                       shuffle=False,

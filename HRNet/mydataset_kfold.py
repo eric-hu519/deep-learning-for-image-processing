@@ -117,10 +117,7 @@ class myKeypoint(data.Dataset):
         return image, target
 
     def __len__(self):
-        if self.train_indices:
-            return len(self.train_indices)
-        else:
-            return len(self.val_indices)
+        return len(self.valid_person_list)
 
     @staticmethod
     def collate_fn(batch):
