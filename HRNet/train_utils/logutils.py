@@ -4,23 +4,6 @@ import re
 import glob
 from pathlib import Path
 
-def wandb_init(args):
-    wandb.init(project="spinopelvic", config=args)
-    wandb.run.name = str(args.output_dir).split('/')[-1]
-    #wandb.run.save()
-    wandb.watch_called = False
-
-    # WandB – Config is a variable that holds and saves hyperparameters and inputs
-    config = wandb.config          # Initialize config
-    config.learning_rate = args.lr
-    config.batch_size = args.batch_size
-    config.epochs = args.epochs
-    config.weight_decay = args.weight_decay
-    config.lr_steps = args.lr_steps
-    config.lr_gamma = args.lr_gamma
-    config.num_joints = args.num_joints
-    config.fixed_size = args.fixed_size
-    config.with_FFCA = args.with_FFCA
 
 def wandb_log(epoch, train_loss, cocoinfo,best_results):
     wandb.log({
@@ -62,41 +45,43 @@ def increment_path(path, exist_ok=False, sep='', mkdir=False):
         dir.mkdir(parents=True, exist_ok=True)  # make directory
     return path
 
-def sweep_override(args):
+def sweep_override(config):
     #limit_batch to avoid cuda overdrive
-    if args.fixed_size < 512:
-        args.batch_size = 32 
-    elif args.fixed_size == 512 :
-        args.batch_size = 28
-    elif args.fixed_size > 512 :
-        args.batch_size = 16
-    #adjust lr scheme according to args
-    if args.lr_steps == 1:
-        stage1 = round((args.epochs-1) * 0.25)
-        stage2 = round((args.epochs-1) * 0.5)
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 2:
-        stage1 = round((args.epochs-1) * 0.5)
-        stage2 = round((args.epochs-1) * 0.75)
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 3:
-        stage1 = round((args.epochs-1) * 0.25)
-        stage2 = round((args.epochs-1) * 0.75)
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 4:
-        stage1 = round((args.epochs-1) * 0.5)
-        stage2 = args.epoch-1
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 5:
-        stage1 = round((args.epochs-1) * 0.75)
-        stage2 = args.epoch-1
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 6:
-        stage1 = round((args.epochs-1) * 0.25)
-        stage2 = args.epoch-1
-        args.lr_steps = [stage1,stage2]
-    return args
-    
+    if config['fixed_size'] < 512:
+        config['batch_size'] = 32
+    elif config['fixed_size'] == 512 :
+        config['batch_size'] = 28
+    elif config['fixed_size'] > 512 :
+        config['batch_size'] = 16
+    config['fixed_size'] = [config['fixed_size'],config['fixed_size']]
+    #adjust lr scheme according to config,    
+    if config['lr_steps'] == 1:
+        stage1 = round((config['epochs']-1) * 0.25)
+        stage2 = round((config['epochs']-1) * 0.5)
+        config['lr_steps'] = [stage1,stage2]
+    elif config['lr_steps'] == 2:
+        stage1 = round((config['epochs']-1) * 0.5)
+        stage2 = round((config['epochs']-1) * 0.75)
+        config['lr_steps'] = [stage1,stage2]
+    elif config['lr_steps'] == 3:
+        stage1 = round((config['epochs']-1) * 0.25)
+        stage2 = round((config['epochs']-1) * 0.75)
+        config['lr_steps'] = [stage1,stage2]
+    elif config['lr_steps'] == 4:
+        stage1 = round((config['epochs']-1) * 0.5)
+        stage2 = config['epochs']-1
+        config['lr_steps'] = [stage1,stage2]
+    elif config['lr_steps'] == 5:
+        stage1 = round((config['epochs']-1) * 0.75)
+        stage2 = config['epoch']-1
+        config['lr_steps'] = [stage1,stage2]
+    elif config['lr_steps'] == 6:
+        stage1 = round((config['epochs']-1) * 0.25)
+        stage2 = config['epoch']-1
+        config['lr_steps'] = [stage1,stage2]
+    config['amp'] = bool(config['amp'])
+    config['save_best'] = bool(config['save_best'])
+    return config    
 def reset_wandb_env():
     exclude = {
         "WANDB_PROJECT",
