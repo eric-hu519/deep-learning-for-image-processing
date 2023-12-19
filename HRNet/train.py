@@ -5,8 +5,7 @@ from pathlib import Path
 import torch
 from torch.utils import data
 import numpy as np
-import re
-import glob
+
 import transforms
 from model import HighResolutionNet
 from my_dataset_coco import CocoKeypoint
@@ -14,47 +13,8 @@ from mydataset_kfold import myKeypoint
 from train_utils import train_eval_utils as utils
 import wandb
 import mypredict
-def wandb_init(args):
-    wandb.init(project="spinopelvic", config=args)
-    wandb.run.name = str(args.output_dir).split('/')[-1]
-    #wandb.run.save()
-    wandb.watch_called = False
-
-    # WandB – Config is a variable that holds and saves hyperparameters and inputs
-    config = wandb.config          # Initialize config
-    config.learning_rate = args.lr
-    config.batch_size = args.batch_size
-    config.epochs = args.epochs
-    config.weight_decay = args.weight_decay
-    config.lr_steps = args.lr_steps
-    config.lr_gamma = args.lr_gamma
-    config.num_joints = args.num_joints
-    config.fixed_size = args.fixed_size
-    config.with_FFCA = args.with_FFCA
-
-def wandb_log(epoch, train_loss, cocoinfo,best_results):
-    wandb.log({
-        "epoch": epoch,
-        "train_loss": train_loss,
-        "val_loss": cocoinfo[14],
-        "sc_abs_error": cocoinfo[10],
-        "s1_abs_error": cocoinfo[11],
-        "fh1_abs_error": cocoinfo[12],
-        "fh2_abs_error": cocoinfo[13],
-        "sc_best": best_results[0],
-        "s1_best": best_results[1],
-        "fh1_best": best_results[2],
-        "fh2_best": best_results[3],
-
-        "Avg Precision @[ IoU=0.50:0.95 | area=   all | maxDets=20 ]": cocoinfo[0],
-        "Avg Precision @[ IoU=0.50      | area=   all | maxDets=20 ]": cocoinfo[1],
-        "Avg Precision @[ IoU=0.75      | area=   all | maxDets=20 ]": cocoinfo[2],
-        "Avg Precision @[ IoU=0.50:0.95 | area= large | maxDets=20 ]": cocoinfo[4],
-        "Avg Recall @[ IoU=0.50:0.95 | area=   all | maxDets= 20 ]": cocoinfo[5],
-        "Avg Recall @[ IoU=0.50 | area= all | maxDets= 20 ]": cocoinfo[6],
-        "Avg Recall @[ IoU=0.75 | area= all | maxDets= 20 ]": cocoinfo[7],
-        "Avg Recall @[ IoU=0.50:0.95 | area= large | maxDets= 20 ]": cocoinfo[9],
-    })
+from train_utils import logutils
+import random
 
 def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
     #base_channel=32 means HRnet-w32
@@ -76,11 +36,69 @@ def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
             #如果载入的是coco权重，对比下num_joints，如果不相等就删除
             #if "final_layer" in k:
                 #if weights_dict[k].shape[0] != num_joints:
-                    #del weights_dict[k]
+                    #del weights_dict[k]import argparse
 
-        missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
-        if len(missing_keys) != 0:
-            print("missing_keys: ", missing_keys, "\n", "unexpected_keys: ", unexpected_keys)
+    parser = argparse.ArgumentParser(
+        description=__doc__)
+
+    # 训练设备类型
+    parser.add_argument('--device', default='cuda:0', help='device')
+    # 训练数据集的根目录(coco2017)
+    parser.add_argument('--data-path', default='datasets', help='dataset')
+    # COCO数据集人体关键点信息
+    parser.add_argument('--keypoints-path', default="./spinopelvic_keypoints.json", type=str,
+                        help='person_keypoints.json path')
+    # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
+    parser.add_argument('--person-det', type=str, default=None)
+    parser.add_argument('--fixed-size', default=[256,256], nargs='+', type=int, help='input size')
+    # keypoints点数
+    parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
+    # 文件保存地址
+    parser.add_argument('--output-dir', default='./save_weights/exp', help='path where to save')
+    # 若需要接着上次训练，则指定上次训练保存权重文件地址
+    parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
+    # 指定接着从哪个epoch数开始训练
+    parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
+    # 训练的总epoch数
+    parser.add_argument('--epochs', default=200, type=int, metavar='N',
+                        help='number of total epochs to run')
+    # 针对torch.optim.lr_scheduler.MultiStepLR的参数
+    parser.add_argument('--lr-steps', default=[100, 150], nargs='+', type=int, help='decrease lr every step-size epochs')
+    # 针对torch.optim.lr_scheduler.MultiStepLR的参数
+    parser.add_argument('--lr-gamma', default=0.3258, type=float, help='decrease lr by a factor of lr-gamma')
+    # 学习率
+    parser.add_argument('--lr', default=0.00188, type=float,
+                        help='initial learning rate, 0.02 is the default value for training '
+                             'on 8 gpus and 2 images_per_gpu')
+    # AdamW的weight_decay参数
+    parser.add_argument('--wd', '--weight-decay', default=1.87e-4, type=float,
+                        metavar='W', help='weight decay (default: 1e-4)',
+                        dest='weight_decay')
+    # 训练的batch size
+    parser.add_argument('--batch-size', default=28, type=int, metavar='N',
+                        help='batch size when training.')
+    # 是否使用混合精度训练(需要GPU支持混合精度)
+    parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
+    parser.add_argument("--savebest", default = 1, help="save best model")
+    parser.add_argument("--log-path", default = "./runs/exp", help="log path")
+    parser.add_argument("--with_FFCA", default= True , help="enable FFCA")
+    parser.add_argument("--optimizer", default="adamw", help="optimizer")
+    parser.add_argument("--debug", default= True , help="debug mode")
+    args = parser.parse_args()
+    print(args)
+
+    # 检查保存权重文件夹是否存在，不存在则创建
+    args.output_dir = logutils.increment_path(Path(args.output_dir), exist_ok=False,mkdir=True)
+    #args.output_dir = increment_path(Path(args.output_dir),Path(args.output_dir), exist_ok=False,mkdir=False)
+    #args.fixed_size = [args.fixed_size[0], args.fixed_size[0]]
+    #steps = args.lr_steps[0]
+    #next_steps = steps + 50
+    #args.lr_steps = [steps, next_steps]
+
+
+    missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
+    if len(missing_keys) != 0:
+        print("missing_keys: ", missing_keys, "\n", "unexpected_keys: ", unexpected_keys)
             # 添加缺失的权重和偏置
             #for key in missing_keys:
                 #if 'weight' in key:
@@ -100,74 +118,121 @@ def check_loss_list(loss_list, loss):
     else:
         return False
 
-def increment_path(path, exist_ok=False, sep='', mkdir=False):
-    # Increment file or directory path, i.e. runs/exp --> runs/exp{sep}2, runs/exp{sep}3, ... etc.
-    path = Path(path)  # os-agnostic
-    if path.exists() and not exist_ok:
-        suffix = path.suffix
-        path = path.with_suffix('')
-        dirs = glob.glob(f"{path}{sep}*")  # similar paths
-        matches = [re.search(rf"%s{sep}(\d+)" % path.stem, d) for d in dirs]
-        i = [int(m.groups()[0]) for m in matches if m]  # indices
-        n = max(i) + 1 if i else 2  # increment number
-        path = Path(f"{path}{sep}{n}{suffix}")  # update path
-    dir = path if path.suffix == '' else path.parent  # directory
-    if not dir.exists() and mkdir:
-        dir.mkdir(parents=True, exist_ok=True)  # make directory
-    return path
+def parse_args():
+    import argparse
 
-#def splitdataset(kfold = 10, data_root, data_transform):
-    dataset = CocoKeypoint(data_root, "train", transforms=data_transform["train"], fixed_size=args.fixed_size)
+    parser = argparse.ArgumentParser(
+        description=__doc__)
 
+    # 训练设备类型
+    parser.add_argument('--device', default='cuda:0', help='device')
+    # 训练数据集的根目录(coco2017)
+    parser.add_argument('--data-path', default='datasets', help='dataset')
+    # COCO数据集人体关键点信息
+    parser.add_argument('--keypoints-path', default="./spinopelvic_keypoints.json", type=str,
+                        help='person_keypoints.json path')
+    # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
+    parser.add_argument('--person-det', type=str, default=None)
+    parser.add_argument('--fixed-size', default=[256,256], nargs='+', type=int, help='input size')
+    # keypoints点数
+    parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
+    # 文件保存地址
+    parser.add_argument('--output-dir', default='./save_weights/exp', help='path where to save')
+    # 若需要接着上次训练，则指定上次训练保存权重文件地址
+    parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
+    # 指定接着从哪个epoch数开始训练
+    parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
+    # 训练的总epoch数
+    parser.add_argument('--epochs', default=200, type=int, metavar='N',
+                        help='number of total epochs to run')
+    # 针对torch.optim.lr_scheduler.MultiStepLR的参数
+    parser.add_argument('--lr-steps', default=[100, 150], nargs='+', type=int, help='decrease lr every step-size epochs')
+    # 针对torch.optim.lr_scheduler.MultiStepLR的参数
+    parser.add_argument('--lr-gamma', default=0.3258, type=float, help='decrease lr by a factor of lr-gamma')
+    # 学习率
+    parser.add_argument('--lr', default=0.00188, type=float,
+                        help='initial learning rate, 0.02 is the default value for training '
+                             'on 8 gpus and 2 images_per_gpu')
+    # AdamW的weight_decay参数
+    parser.add_argument('--wd', '--weight-decay', default=1.87e-4, type=float,
+                        metavar='W', help='weight decay (default: 1e-4)',
+                        dest='weight_decay')
+    # 训练的batch size
+    parser.add_argument('--batch-size', default=28, type=int, metavar='N',
+                        help='batch size when training.')
+    # 是否使用混合精度训练(需要GPU支持混合精度)
+    parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
+    parser.add_argument("--savebest", default = 1, help="save best model")
+    parser.add_argument("--log-path", default = "./runs/exp", help="log path")
+    parser.add_argument("--with_FFCA", default= True , help="enable FFCA")
+    parser.add_argument("--optimizer", default="adamw", help="optimizer")
+    parser.add_argument("--debug", default= True , help="debug mode")
+    args = parser.parse_args()
+    print(args)
 
-
-
-
-
-#config for wandb sweep
-def sweep_override(args):
-    #limit_batch to avoid cuda overdrive
-    if args.fixed_size < 512:
-        args.batch_size = 32 
-    elif args.fixed_size == 512 :
-        args.batch_size = 28
-    elif args.fixed_size > 512 :
-        args.batch_size = 16
-    #adjust lr scheme according to args
-    if args.lr_steps == 1:
-        stage1 = round((args.epochs-1) * 0.25)
-        stage2 = round((args.epochs-1) * 0.5)
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 2:
-        stage1 = round((args.epochs-1) * 0.5)
-        stage2 = round((args.epochs-1) * 0.75)
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 3:
-        stage1 = round((args.epochs-1) * 0.25)
-        stage2 = round((args.epochs-1) * 0.75)
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 4:
-        stage1 = round((args.epochs-1) * 0.5)
-        stage2 = args.epoch-1
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 5:
-        stage1 = round((args.epochs-1) * 0.75)
-        stage2 = args.epoch-1
-        args.lr_steps = [stage1,stage2]
-    elif args.lr_steps == 6:
-        stage1 = round((args.epochs-1) * 0.25)
-        stage2 = args.epoch-1
-        args.lr_steps = [stage1,stage2]
+    # 检查保存权重文件夹是否存在，不存在则创建
+    args.output_dir = logutils.increment_path(Path(args.output_dir), exist_ok=False,mkdir=True)
+    #args.output_dir = increment_path(Path(args.output_dir),Path(args.output_dir), exist_ok=False,mkdir=False)
+    #args.fixed_size = [args.fixed_size[0], args.fixed_size[0]]
+    #steps = args.lr_steps[0]
+    #next_steps = steps + 50
+    #args.lr_steps = [steps, next_steps]
     return args
-    
-    
-def main(args):
-    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
-    if not args.debug:
-        wandb.login()
-        wandb_init(args)
 
-    #set random seed
+
+def cross_validate():
+
+    num_folds = 3
+
+    sweep_run = wandb.init()
+    sweep_id = sweep_run.sweep_id or "unknown"
+    sweep_url = sweep_run.get_sweep_url()
+    project_url = sweep_run.get_project_url()
+    sweep_group_url = f'{project_url}/groups/{sweep_id}'
+    sweep_run.notes = sweep_group_url
+    sweep_run.save()
+    sweep_run_name = sweep_run.name or sweep_run.id or "unknown_2"
+    sweep_run_id = sweep_run.id
+    sweep_run.finish()
+    wandb.sdk.wandb_setup._setup(_reset=True)
+
+    metrics = []
+    for num in range(num_folds):
+        logutils.reset_wandb_env()
+        result = train(
+            sweep_id=sweep_id,
+            num=num,
+            sweep_run_name=sweep_run_name,
+            args=dict(sweep_run.config),#指定训练参数
+        )
+        metrics.append(result)
+
+    # resume the sweep run
+    sweep_run = wandb.init(id=sweep_run_id, resume="must")
+    # log metric to sweep run
+    sweep_run.log(dict(val_accuracy=sum(metrics) / len(metrics)))
+    sweep_run.finish()
+
+    print("*" * 40)
+    print("Sweep URL:       ", sweep_url)
+    print("Sweep Group URL: ", sweep_group_url)
+    print("*" * 40)
+
+
+
+
+
+def train(num, sweep_id, sweep_run_name,args):
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    run_name = f'{sweep_run_name}-{num}'
+    run = wandb.init(
+        group=sweep_id,
+        job_type=sweep_run_name,
+        name=run_name,
+        config=args,
+        reinit=True
+    )
+#set random seed
     torch.manual_seed(3407)
     torch.cuda.manual_seed(3407)
     np.random.seed(3407)
@@ -211,12 +276,10 @@ def main(args):
     # load train data set
     # coco2017 -> annotations -> person_keypoints_train2017.json
     #get all dataset
-    dataset = myKeypoint(data_root, "allanno", transforms=None, fixed_size=args.fixed_size)
-    #split dataset with kfold
-    train_dataset, val_dataset = dataset.splitdataset(kfold = 10)
+    train_dataset = CocoKeypoint(data_root, "allanno", transforms=None, fixed_size=args.fixed_size)
+    val_dataset = CocoKeypoint(data_root, "test", transforms=data_transform["val"], fixed_size=args.fixed_size)
     #transform datasets after split
-    train_dataset.transform = data_transform["train"]
-    val_dataset.transform = data_transform["val"]
+
     
     # 注意这里的collate_fn是自定义的，因为读取的数据包括image和targets，不能直接使用默认的方法合成batch
     batch_size = args.batch_size
@@ -335,7 +398,7 @@ def main(args):
 
         is_save = check_loss_list(val_loss, val_loss[-1])
         if not args.debug:
-            wandb_log(epoch, train_loss[-1], coco_info, best_err)
+            logutils.wandb_log(epoch, train_loss[-1], coco_info, best_err)
         # save weights
         save_files = {
             'model': model.state_dict(),
@@ -394,65 +457,42 @@ def main(args):
               "min_s1_e: ",best_err[1],"\n",
               "min_fh1_e: ",best_err[2],"\n",
               "min_fh2_e: ",best_err[3],"\n")
+    val_accuracy = random.random()
+    run.log(dict(val_accuracy=val_accuracy))
+    run.finish()
+    return val_accuracy
 
-if __name__ == "__main__":
-    import argparse
 
-    parser = argparse.ArgumentParser(
-        description=__doc__)
+#sweep configuration for wandb swe
+sweep_config = {
+    'method': 'grid',
+    'name': 'sweep-test-1',
+    'metric': {
+        'goal': 'maximize',
+        'name': 'val_accuracy'
+    }
+    
+}
+parameters_dict = {
+    'optimizer': {
+        'values': ['adam', 'sgd']
+        },
+    'fc_layer_size': {
+        'values': [128, 256, 512]
+        },
+    'dropout': {
+          'values': [0.3, 0.4, 0.5]
+        },
+    }
+sweep_config['parameters'] = parameters_dict
+#main function for sweep
+def main():
+    
+    wandb.login()
+    sweep_id = wandb.sweep(sweep_config, project='sweep-test')
+    #制定运行方程为cross_validate
+    wandb.agent(sweep_id, function=cross_validate)
+    wandb.finish()
 
-    # 训练设备类型
-    parser.add_argument('--device', default='cuda:0', help='device')
-    # 训练数据集的根目录(coco2017)
-    parser.add_argument('--data-path', default='datasets', help='dataset')
-    # COCO数据集人体关键点信息
-    parser.add_argument('--keypoints-path', default="./spinopelvic_keypoints.json", type=str,
-                        help='person_keypoints.json path')
-    # 原项目提供的验证集person检测信息，如果要使用GT信息，直接将该参数置为None，建议设置成None
-    parser.add_argument('--person-det', type=str, default=None)
-    parser.add_argument('--fixed-size', default=[256,256], nargs='+', type=int, help='input size')
-    # keypoints点数
-    parser.add_argument('--num-joints', default=4, type=int, help='num_joints')
-    # 文件保存地址
-    parser.add_argument('--output-dir', default='./save_weights/exp', help='path where to save')
-    # 若需要接着上次训练，则指定上次训练保存权重文件地址
-    parser.add_argument('--resume', default='', type=str, help='resume from checkpoint')
-    # 指定接着从哪个epoch数开始训练
-    parser.add_argument('--start-epoch', default=0, type=int, help='start epoch')
-    # 训练的总epoch数
-    parser.add_argument('--epochs', default=200, type=int, metavar='N',
-                        help='number of total epochs to run')
-    # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-steps', default=[100, 150], nargs='+', type=int, help='decrease lr every step-size epochs')
-    # 针对torch.optim.lr_scheduler.MultiStepLR的参数
-    parser.add_argument('--lr-gamma', default=0.3258, type=float, help='decrease lr by a factor of lr-gamma')
-    # 学习率
-    parser.add_argument('--lr', default=0.00188, type=float,
-                        help='initial learning rate, 0.02 is the default value for training '
-                             'on 8 gpus and 2 images_per_gpu')
-    # AdamW的weight_decay参数
-    parser.add_argument('--wd', '--weight-decay', default=1.87e-4, type=float,
-                        metavar='W', help='weight decay (default: 1e-4)',
-                        dest='weight_decay')
-    # 训练的batch size
-    parser.add_argument('--batch-size', default=28, type=int, metavar='N',
-                        help='batch size when training.')
-    # 是否使用混合精度训练(需要GPU支持混合精度)
-    parser.add_argument("--amp", action="store_true", help="Use torch.cuda.amp for mixed precision training")
-    parser.add_argument("--savebest", default = 1, help="save best model")
-    parser.add_argument("--log-path", default = "./runs/exp", help="log path")
-    parser.add_argument("--with_FFCA", default= True , help="enable FFCA")
-    parser.add_argument("--optimizer", default="adamw", help="optimizer")
-    parser.add_argument("--debug", default= True , help="debug mode")
-    args = parser.parse_args()
-    print(args)
 
-    # 检查保存权重文件夹是否存在，不存在则创建
-    args.output_dir = increment_path(Path(args.output_dir), exist_ok=False,mkdir=True)
-    #args.output_dir = increment_path(Path(args.output_dir),Path(args.output_dir), exist_ok=False,mkdir=False)
-    #args.fixed_size = [args.fixed_size[0], args.fixed_size[0]]
-    #steps = args.lr_steps[0]
-    #next_steps = steps + 50
-    #args.lr_steps = [steps, next_steps]
-    main(args)
-
+    
