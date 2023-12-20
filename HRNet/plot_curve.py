@@ -41,7 +41,7 @@ def plot_map(mAP,path):
     try:
         x = list(range(len(mAP)))
         plt.plot(x, mAP, label='mAp')
-        plt.xlabel('epoch')
+        plt.xlabel('epochs')
         plt.ylabel('mAP')
         plt.title('Eval mAP')
         plt.xlim(0, len(mAP))
@@ -63,14 +63,14 @@ def plot_abs_error(abs_error, err_name, path):
         fig, ax = plt.subplots(1, 2, figsize=(10, 5))
         
         ax[0].plot(x, (np.log(abs_error) + np.spacing(1)), label='log abs error')
-        ax[0].set_xlabel('epoch')
+        ax[0].set_xlabel('epochs')
         ax[0].set_ylabel('log abs error')
         ax[0].set_title('Eval log abs_error')
         ax[0].set_xlim(0, len(abs_error))
         ax[0].legend(loc='best')
 
         ax[1].plot(x, abs_error, label='abs error')
-        ax[1].set_xlabel('epoch')
+        ax[1].set_xlabel('epochs')
         ax[1].set_ylabel('abs error')
         ax[1].set_title('Eval abs_error')
         ax[1].set_xlim(0, len(abs_error))

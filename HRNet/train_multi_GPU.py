@@ -135,7 +135,7 @@ def main(args):
         model_without_ddp.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-        args.start_epoch = checkpoint['epoch'] + 1
+        args.start_epoch = checkpoint['epochs'] + 1
         if args.amp and "scaler" in checkpoint:
             scaler.load_state_dict(checkpoint["scaler"])
 
@@ -183,7 +183,7 @@ def main(args):
                           'optimizer': optimizer.state_dict(),
                           'lr_scheduler': lr_scheduler.state_dict(),
                           'args': args,
-                          'epoch': epoch}
+                          'epochs': epoch}
             if args.amp:
                 save_files["scaler"] = scaler.state_dict()
             save_on_master(save_files,

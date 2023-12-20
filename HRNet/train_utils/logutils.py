@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def wandb_log(epoch, train_loss, cocoinfo,best_results):
-    wandb.log({
+    log={
         "epoch": epoch,
         "train_loss": train_loss,
         "val_loss": cocoinfo[14],
@@ -27,7 +27,8 @@ def wandb_log(epoch, train_loss, cocoinfo,best_results):
         "Avg Recall @[ IoU=0.50 | area= all | maxDets= 20 ]": cocoinfo[6],
         "Avg Recall @[ IoU=0.75 | area= all | maxDets= 20 ]": cocoinfo[7],
         "Avg Recall @[ IoU=0.50:0.95 | area= large | maxDets= 20 ]": cocoinfo[9],
-    })
+    }
+    return log
 
 def increment_path(path, exist_ok=False, sep='', mkdir=False):
     # Increment file or directory path, i.e. runs/exp --> runs/exp{sep}2, runs/exp{sep}3, ... etc.
@@ -47,40 +48,40 @@ def increment_path(path, exist_ok=False, sep='', mkdir=False):
 
 def sweep_override(config):
     #limit_batch to avoid cuda overdrive
-    if config['fixed_size'] < 512:
+    if config['fixed-size'] < 512:
         config['batch_size'] = 32
-    elif config['fixed_size'] == 512 :
+    elif config['fixed-size'] == 512 :
         config['batch_size'] = 28
-    elif config['fixed_size'] > 512 :
+    elif config['fixed-size'] > 512 :
         config['batch_size'] = 16
-    config['fixed_size'] = [config['fixed_size'],config['fixed_size']]
+    config['fixed-size'] = [config['fixed-size'],config['fixed-size']]
     #adjust lr scheme according to config,    
-    if config['lr_steps'] == 1:
+    if config['lr-steps'] == 1:
         stage1 = round((config['epochs']-1) * 0.25)
         stage2 = round((config['epochs']-1) * 0.5)
-        config['lr_steps'] = [stage1,stage2]
-    elif config['lr_steps'] == 2:
+        config['lr-steps'] = [stage1,stage2]
+    elif config['lr-steps'] == 2:
         stage1 = round((config['epochs']-1) * 0.5)
         stage2 = round((config['epochs']-1) * 0.75)
-        config['lr_steps'] = [stage1,stage2]
-    elif config['lr_steps'] == 3:
+        config['lr-steps'] = [stage1,stage2]
+    elif config['lr-steps'] == 3:
         stage1 = round((config['epochs']-1) * 0.25)
         stage2 = round((config['epochs']-1) * 0.75)
-        config['lr_steps'] = [stage1,stage2]
-    elif config['lr_steps'] == 4:
+        config['lr-steps'] = [stage1,stage2]
+    elif config['lr-steps'] == 4:
         stage1 = round((config['epochs']-1) * 0.5)
         stage2 = config['epochs']-1
-        config['lr_steps'] = [stage1,stage2]
-    elif config['lr_steps'] == 5:
+        config['lr-steps'] = [stage1,stage2]
+    elif config['lr-steps'] == 5:
         stage1 = round((config['epochs']-1) * 0.75)
-        stage2 = config['epoch']-1
-        config['lr_steps'] = [stage1,stage2]
-    elif config['lr_steps'] == 6:
+        stage2 = config['epochs']-1
+        config['lr-steps'] = [stage1,stage2]
+    elif config['lr-steps'] == 6:
         stage1 = round((config['epochs']-1) * 0.25)
-        stage2 = config['epoch']-1
-        config['lr_steps'] = [stage1,stage2]
+        stage2 = config['epochs']-1
+        config['lr-steps'] = [stage1,stage2]
     config['amp'] = bool(config['amp'])
-    config['save_best'] = bool(config['save_best'])
+    config['savebest'] = bool(config['savebest'])
     return config    
 def reset_wandb_env():
     exclude = {

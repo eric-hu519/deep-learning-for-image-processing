@@ -18,8 +18,11 @@ class CocoKeypoint(data.Dataset):
                  fixed_size=(256, 192)):
         super().__init__()
         
-        assert dataset in ["train", "val", "test"], 'dataset must be in ["train", "val", "test"]'
-        anno_file = f"{dataset}_converted.json"
+        assert dataset in ["train", "val", "test","allanno"], 'dataset must be in ["train", "val", "test","allanno"]'
+        if dataset == "allanno":
+            anno_file = f"{dataset}.json"
+        else:
+            anno_file = f"{dataset}_converted.json"
         assert os.path.exists(root), "file '{}' does not exist.".format(root)
         self.img_root = os.path.join(root,"images", f"{dataset}")
         assert os.path.exists(self.img_root), "path '{}' does not exist.".format(self.img_root)
@@ -88,7 +91,6 @@ class CocoKeypoint(data.Dataset):
 
     def __getitem__(self, idx):
         target = copy.deepcopy(self.valid_person_list[idx])
-
         image = cv2.imread(target["image_path"])
         #转换颜色格式
         #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -101,15 +103,10 @@ class CocoKeypoint(data.Dataset):
     def __len__(self):
         return len(self.valid_person_list)
 
-    @staticmethod
-    def collate_fn(batch):
-        imgs_tuple, targets_tuple = tuple(zip(*batch))
-        imgs_tensor = torch.stack(imgs_tuple)
-        return imgs_tensor, targets_tuple
 
 
 if __name__ == '__main__':
     train = CocoKeypoint("datasets", dataset="train")#输入参数
     print(len(train))
-    t = train[0]
-    print(t)
+    
+    

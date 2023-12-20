@@ -9,10 +9,9 @@ import numpy as np
 import transforms
 from model import HighResolutionNet
 from my_dataset_coco import CocoKeypoint
-from mydataset_kfold import myKeypoint
+from mydataset_kfold import MyDataset
 from train_utils import train_eval_utils as utils
 import wandb
-import mypredict
 from train_utils import logutils
 import random
 
@@ -63,35 +62,56 @@ def check_loss_list(loss_list, loss):
 
 from sklearn.model_selection import KFold
 
-def cross_validate():
+def cross_validate(args = None):
     num_kfold = 10
-    sweep_run = wandb.init()
-    sweep_id = sweep_run.sweep_id or "unknown"
-    sweep_url = sweep_run.get_sweep_url()
-    project_url = sweep_run.get_project_url()
-    sweep_group_url = f'{project_url}/groups/{sweep_id}'
-    sweep_run.notes = sweep_group_url
-    sweep_run.save()
-    sweep_run_name = sweep_run.name or sweep_run.id or "unknown_2"
-    sweep_run_id = sweep_run.id
-    sweep_run.finish()
-    wandb.sdk.wandb_setup._setup(_reset=True)
-    config = dict(sweep_run.config)
-
+    if args == None:
+        sweep_run = wandb.init()
+        sweep_id = sweep_run.sweep_id or "unknown"
+        sweep_url = sweep_run.get_sweep_url()
+        project_url = sweep_run.get_project_url()
+        sweep_group_url = f'{project_url}/groups/{sweep_id}'
+        sweep_run.notes = sweep_group_url
+        sweep_run.save()
+        sweep_run_name = sweep_run.name or sweep_run.id or "unknown_2"
+        sweep_run_id = sweep_run.id
+        sweep_run.finish()
+        wandb.sdk.wandb_setup._setup(_reset=True)
+        config = dict(sweep_run.config)
+    else:
+        sweep_id = 'unknown'
+        sweep_run_name = 'unknown_2'
+        config = parameters_dict
+        config['lr'] = 0.0005
+        config['wd'] = 1e-4
+        config['lr-steps'] = 1
+        config['fixed-size'] = 128
+        config['lr-gamma'] = 0.1
+        config['device'] = 'cuda:0'
+        config['epochs'] = 200
+        config['num_joints'] = 4
+        config['data-path'] = 'datasets'
+        config['keypoints_path'] = './spinopelvic_keypoints.json'
+        config['output-dir'] = './save_weights/exp'
+        config['amp'] = True
+        config['savebest'] = True
+        config['resume'] = ''
+        config['with_FFCA'] = True
+        config['start-epoch'] = 0
     # Read the entire dataset
-    dataset = CocoKeypoint(config['data-path'], "allanno", transforms=None, fixed_size=config['fixed_size'])
+    dataset = CocoKeypoint(config['data-path'], "allanno", transforms=None, fixed_size=config['fixed-size'])
 
     # Perform k-fold cross-validation
     kf = KFold(n_splits= num_kfold)
     metrics = []
-    num = 0
+    num = 1
     for train_index, val_index in kf.split(dataset):
-        logutils.reset_wandb_env()
+        #reset env for each fold
+        if args == None:
+            logutils.reset_wandb_env()
         
         # Create train and validation datasets based on the fold indices
         train_dataset = data.Subset(dataset, train_index)
         val_dataset = data.Subset(dataset, val_index)
-        
         # Train the model using the train dataset
         result = train(
             sweep_id=sweep_id,
@@ -99,40 +119,43 @@ def cross_validate():
             sweep_run_name=sweep_run_name,
             config=config,  # Specify training parameters
             train_dataset=train_dataset,
-            val_dataset=val_dataset
+            val_dataset=val_dataset,
+            args=args
         )
         metrics.append(result)
         num += 1
-
+    if args == None:
     # Resume the sweep run
-    sweep_run = wandb.init(id=sweep_run_id, resume="must")
-    # Log metric to sweep run
-    sweep_run.log(dict(val_accuracy=sum(metrics) / len(metrics)))
-    sweep_run.finish()
+        sweep_run = wandb.init(id=sweep_run_id, resume="must")
+        # Log metric to sweep run
+        sweep_run.log(dict(val_accuracy=sum(metrics) / len(metrics)))
+        sweep_run.finish()
 
-    print("*" * 40)
-    print("Sweep URL:       ", sweep_url)
-    print("Sweep Group URL: ", sweep_group_url)
-    print("*" * 40)
-
-
+        print("*" * 40)
+        print("Sweep URL:       ", sweep_url)
+        print("Sweep Group URL: ", sweep_group_url)
+        print("*" * 40)
 
 
 
-def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
+
+
+def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = None):
     run_name = f'{sweep_run_name}-{num}'
-    run = wandb.init(
-        group=sweep_id,
-        job_type=sweep_run_name,
-        name=run_name,
-        config=config,
-        reinit=True
-    )
+    if args == None:
+        run = wandb.init(
+            group=sweep_id,
+            job_type=sweep_run_name,
+            name=run_name,
+            config=config,
+            reinit=True
+        )
     #convert config to args
     config = logutils.sweep_override(config)
     device = torch.device(config['device'] if torch.cuda.is_available() else "cpu")
 
-#set random seed
+
+    #set random seed
     torch.manual_seed(3407)
     torch.cuda.manual_seed(3407)
     np.random.seed(3407)
@@ -143,9 +166,9 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
     with open(config['keypoints_path'], "r") as f:
         person_kps_info = json.load(f)
     #get image size info
-    fixed_size = config['fixed_size']
+    fixed_size = config['fixed-size']
     #get heatmap size info(which is 1/4 of image size) 
-    heatmap_hw = (config['fixed_size'][0] // 4, config['fixed_size'][1] // 4)
+    heatmap_hw = (config['fixed-size'][0] // 4, config['fixed-size'][1] // 4)
     kps_weights = np.array(person_kps_info["kps_weights"],
                            dtype=np.float32).reshape((config['num_joints'],))
     data_transform = {
@@ -169,15 +192,13 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
     }
-#TODO: perform data transform on train_dataset and val_dataset
-    #transform datasets 
-    train_dataset = train_dataset.transform(data_transform["train"])
-    val_dataset = val_dataset.transform(data_transform["val"])
-    #transform datasets after split
+    #对训练数据集和测试数据集进行预处理
+    train_dataset = MyDataset(config['data-path'],train_dataset, transform=data_transform["train"])
+    val_dataset = MyDataset(config['data-path'],val_dataset, transform=data_transform["val"])
 
     
     # 注意这里的collate_fn是自定义的，因为读取的数据包括image和targets，不能直接使用默认的方法合成batch
-    batch_size = config['']
+    batch_size = config['epochs']
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers
     print('Using %g dataloader workers' % nw)
 
@@ -190,7 +211,7 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
     #instance dataset
     # load validation data set
     # coco2017 -> annotations -> person_keypoints_val2017.json
-    #val_dataset = CocoKeypoint(data_root, "val", transforms=data_transform["val"], fixed_size=config['fixed_size'],
+    #val_dataset = CocoKeypoint(data_root, "val", transforms=data_transform["val"], fixed_size=config['fixed-size'],
                                #det_json_path=args.person_det)
     val_data_loader = data.DataLoader(val_dataset,
                                       batch_size=batch_size,
@@ -210,7 +231,7 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
     #define adam as optimizer
     optimizer = torch.optim.AdamW(params,
                                   lr=config['lr'],
-                                  weight_decay=config['weight_decay'])
+                                  weight_decay=config['wd'])
 
     scaler = torch.cuda.amp.GradScaler() if config['amp'] else None
 
@@ -223,7 +244,7 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-        config['start-epoch'] = checkpoint['epoch'] + 1
+        config['start-epoch'] = checkpoint['epochs'] + 1
         if config['amp'] and "scaler" in checkpoint:
             scaler.load_state_dict(checkpoint["scaler"])
         print("the training process from epoch{}...".format(config['start-epoch']))
@@ -240,7 +261,7 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
 
     
 
-
+#训练主函数
     for epoch in range(config['start-epoch'], config['epochs']):
         # train for one epoch, printing every 50 iterations
         #利用均方误差作为损失函数
@@ -292,25 +313,25 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
             best_err[3] = fh2_abs_error[-1]
 
         is_save = check_loss_list(val_loss, val_loss[-1])
-        if not config['debug']:
-            logutils.wandb_log(epoch, train_loss[-1], coco_info, best_err)
+        if args == None:
+            run.log(logutils.wandb_log(epoch, train_loss[-1], coco_info, best_err))
         # save weights
         save_files = {
             'model': model.state_dict(),
             'optimizer': optimizer.state_dict(),
             'lr_scheduler': lr_scheduler.state_dict(),
-            'epoch': epoch}
+            'epochs': epoch}
         if config['amp']:
             save_files["scaler"] = scaler.state_dict()
         if is_save:
             best_model = save_files
             best_epoches = epoch
             # torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
-        if epoch == (config[''] - 1):
+        if epoch == (config['epochs'] - 1):
             last_model = save_files
 
     #save best model and last model
-    if best_epoches == (config[''] - 1):
+    if best_epoches == (config['epochs'] - 1):
         torch.save(best_model, "{}/best_model.pth".format(config['output-dir']))
     else:
         torch.save(best_model, "{}/best_model-{}.pth".format(config['output-dir'] ,best_epoches))
@@ -320,13 +341,10 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
         "batch_size": config['batch_size'],
         "learning_rate": config['lr'],
         "num_epochs": config['epochs'],
-        "weight-decay": config['weight_decay'],
-        "lr_steps": config['lr_steps'],
+        "weight-decay": config['wd'],
+        "lr_steps": config['lr-steps'],
         # 添加其他训练参数...
     }
-    if not config['debug']:
-        wandb.run.save()
-        wandb.finish()
     with open("{}/train_config.txt".format(config['output-dir']), "w") as f:
         for key, value in train_params.items():
             f.write(f"{key}: {value}\n")
@@ -352,46 +370,39 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset):
               "min_s1_e: ",best_err[1],"\n",
               "min_fh1_e: ",best_err[2],"\n",
               "min_fh2_e: ",best_err[3],"\n")
-    val_accuracy = random.random()
-    run.log(dict(val_accuracy=val_accuracy))
-    run.finish()
+    #val acc equals the mean error of all points of the last epoch
+    val_accuracy = (s1_abs_error[-1]+sc_abs_error[-1]+fh1_abs_error[-1]+fh2_abs_error[-1])/4
+    if args == None:
+        run.log(dict(val_accuracy=val_accuracy))
+        run.finish()
     return val_accuracy
 
 
 #sweep configuration for wandb swe
 sweep_config = {
-    'method': 'grid',
-    'name': 'sweep-test-1',
+    'method': 'bayes',
+    'name': 'spine-sweep-test-1',
     'metric': {
-        'goal': 'maximize',
+        'goal': 'minimize',
         'name': 'val_accuracy'
     }
     
 }
 #set parameters for train
 parameters_dict = {
-    'optimizer': {
-        'values': ['adam', 'sgd']
-        },
-    'fc_layer_size': {
-        'values': [128, 256, 512]
-        },
-    'dropout': {
-          'values': [0.3, 0.4, 0.5]
-        },
     'device': {
         'values': ['cuda:0']
         },
     'data-path': {
         'values': ['datasets']
         },
-    'keypoints-path': {
+    'keypoints_path': {
         'values': ['./spinopelvic_keypoints.json']
         },
     'fixed-size': {
-        'values': [128, 256, 512, 640]
+        'values': [128, 256]
         },
-    'num-joints': {
+    'num_joints': {
         'values': [4]
         },
     'output-dir': {
@@ -440,15 +451,24 @@ parameters_dict = {
 #add params to sweep_config
 sweep_config['parameters'] = parameters_dict
 #main function for sweep
-def main():
+def main(args):
     
-    wandb.login()
-    sweep_id = wandb.sweep(sweep_config, project='sweep-test')
-    #制定运行方程为cross_validate
-    wandb.agent(sweep_id, function=cross_validate)
-    wandb.finish()
+    if not args.debug:
+        wandb.login()
+        sweep_id = wandb.sweep(sweep_config, project='sweep-test')
+        #制定运行方程为cross_validate
+        wandb.agent(sweep_id, function=cross_validate)
+        wandb.finish()
+    else:
+        cross_validate(args)
+
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description=__doc__)
+    parser.add_argument('--debug', default=True, help='debug mode')
+    args = parser.parse_args()
+    main(args)
 
 
     
