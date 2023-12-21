@@ -382,6 +382,7 @@ def train(num,
                 pthfile = glob.glob(os.path.join(save_path[-1],'*.pth'))
                 for f in pthfile:
                     os.remove(f)
+                print("new best model saved \n","remove last model of fold{}!".format(num))
     #if not save best then save the model for every fold
     else:
         if best_epoches == (run_config['epochs'] - 1):
