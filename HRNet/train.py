@@ -108,10 +108,11 @@ def cross_validate(args = None):
         #reset env for each fold
         if args == None:
             logutils.reset_wandb_env()
-        
+        print(val_index)
         # Create train and validation datasets based on the fold indices
         train_dataset = data.Subset(dataset, train_index)
         val_dataset = data.Subset(dataset, val_index)
+    
         # Train the model using the train dataset
         result = train(
             sweep_id=sweep_id,
@@ -120,7 +121,9 @@ def cross_validate(args = None):
             config=config,  # Specify training parameters
             train_dataset=train_dataset,
             val_dataset=val_dataset,
-            args=args
+            args=args,
+            train_index = train_index,
+            val_index = val_index
         )
         metrics.append(result)
         num += 1
@@ -140,8 +143,9 @@ def cross_validate(args = None):
 
 
 
-def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = None):
+def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = None,train_index = None,val_index = None):
     run_name = f'{sweep_run_name}-{num}'
+    
     if args == None:
         run = wandb.init(
             group=sweep_id,
@@ -193,10 +197,11 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = 
         ])
     }
     #对训练数据集和测试数据集进行预处理
-    train_dataset = MyDataset(config['data-path'],train_dataset, transform=data_transform["train"])
-    val_dataset = MyDataset(config['data-path'],val_dataset, transform=data_transform["val"])
+    train_dataset = MyDataset(config['data-path'],train_dataset, transform=data_transform["train"],train_ids=train_index)
+    val_dataset = MyDataset(config['data-path'],val_dataset, transform=data_transform["val"],train_ids=val_index)
 
-    
+    print("len of train_dataset: ",len(train_dataset),"\n",
+              "len of val_dataset: ",len(val_dataset),"\n")
     # 注意这里的collate_fn是自定义的，因为读取的数据包括image和targets，不能直接使用默认的方法合成batch
     batch_size = config['epochs']
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers
