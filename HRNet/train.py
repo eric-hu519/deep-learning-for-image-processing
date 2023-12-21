@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from torch.utils import data
 import numpy as np
-
+import glob
 import transforms
 from model import HighResolutionNet
 from my_dataset_coco import CocoKeypoint
@@ -78,6 +78,7 @@ def cross_validate(args = None):
         wandb.sdk.wandb_setup._setup(_reset=True)
         config = dict(sweep_run.config)
     else:
+        #set params for debug only
         sweep_id = 'unknown'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
@@ -103,6 +104,7 @@ def cross_validate(args = None):
     # Perform k-fold cross-validation
     kf = KFold(n_splits= num_kfold)
     metrics = []
+    save_path = []
     num = 1
     for train_index, val_index in kf.split(dataset):
         #reset env for each fold
@@ -123,10 +125,18 @@ def cross_validate(args = None):
             val_dataset=val_dataset,
             args=args,
             train_index = train_index,
-            val_index = val_index
+            val_index = val_index,
+            metrics = metrics,
+            save_path = save_path
         )
-        metrics.append(result)
+        metrics.append(result[0])
+        save_path.append(result[1])
         num += 1
+        print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
+    #save metrics as txt
+    with open("metrics-{}.txt".format(sweep_id), "w") as f:
+        f.write("metrics: {}\n".format(metrics))
+
     if args == None:
     # Resume the sweep run
         sweep_run = wandb.init(id=sweep_run_id, resume="must")
@@ -143,7 +153,17 @@ def cross_validate(args = None):
 
 
 
-def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = None,train_index = None,val_index = None):
+def train(num, 
+          sweep_id, 
+          sweep_run_name,
+          config,
+          train_dataset,
+          val_dataset,args = None,
+          train_index = None,
+          val_index = None, 
+          metrics = None, 
+          save_path = None):
+    #set run_name for each fold
     run_name = f'{sweep_run_name}-{num}'
     
     if args == None:
@@ -158,11 +178,6 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = 
     config = logutils.sweep_override(config)
     device = torch.device(config['device'] if torch.cuda.is_available() else "cpu")
 
-
-    #set random seed
-    torch.manual_seed(3407)
-    torch.cuda.manual_seed(3407)
-    np.random.seed(3407)
 
     # save coco_info
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -293,9 +308,9 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = 
         #    os.makedirs("./runs")
         # 将实验结果写入txt，保存在runs文件夹下
         if config:
-            results_file = "{}/withFFCA_results.txt".format(config['output-dir'])  # 修改保存结果的文件路径为"./runs/results.txt"
+            results_file = "{}/withFFCA_results_fold{}.txt".format(config['output-dir'], num)  # 修改保存结果的文件路径为"./runs/results.txt"
         else:
-            results_file = "{}/noFFCA_results.txt".format(config['output-dir'])
+            results_file = "{}/noFFCA_results_fold{}.txt".format(config['output-dir'], num)
         with open(results_file, "a") as f:
             # 写入的数据包括coco指标还有loss和learning rate
             result_info = [f"{i:.4f}" for i in coco_info + [mean_loss.item()]] + [f"{lr:.6f}"]
@@ -316,7 +331,7 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = 
             best_err[2] = fh1_abs_error[-1]
         if check_loss_list(fh2_abs_error, fh2_abs_error[-1]):
             best_err[3] = fh2_abs_error[-1]
-
+        
         is_save = check_loss_list(val_loss, val_loss[-1])
         if args == None:
             run.log(logutils.wandb_log(epoch, train_loss[-1], coco_info, best_err))
@@ -335,12 +350,39 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = 
         if epoch == (config['epochs'] - 1):
             last_model = save_files
 
+    #val acc equals the mean error of all points of the last epoch
+    val_accuracy = (s1_abs_error[-1]+sc_abs_error[-1]+fh1_abs_error[-1]+fh2_abs_error[-1])/4
+
+    print("val_accuracy: ",val_accuracy,"\n")
     #save best model and last model
-    if best_epoches == (config['epochs'] - 1):
-        torch.save(best_model, "{}/best_model.pth".format(config['output-dir']))
+    if config['savebest']:
+        if num == 1:
+            #save model for the first run
+            if best_epoches == (config['epochs'] - 1):
+                torch.save(best_model, "{}/best_model_fold{}.pth".format(config['output-dir'],num))
+            else:
+                torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(config['output-dir'] ,best_epoches,num))
+                torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(config['output-dir'],epoch,num))
+        elif num != 1 & (len(metrics) != 0):
+            if val_accuracy <= min(metrics):
+                #save model of current fold
+                if best_epoches == (config['epochs'] - 1):
+                    torch.save(best_model, "{}/best_model_fold{}.pth".format(config['output-dir'],num))
+                else:
+                    torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(config['output-dir'] ,best_epoches,num))
+                    torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(config['output-dir'],epoch,num))
+                #remove the last model
+                assert len(save_path) != 0, "save_path is empty"
+                pthfile = glob.glob(os.path.join(save_path[-1],'*.pth'))
+                for f in pthfile:
+                    os.remove(f)
+    #if not save best then save the model for every fold
     else:
-        torch.save(best_model, "{}/best_model-{}.pth".format(config['output-dir'] ,best_epoches))
-        torch.save(last_model, "{}/last_model-{}.pth".format(config['output-dir'],epoch))
+        if best_epoches == (config['epochs'] - 1):
+            torch.save(best_model, "{}/best_model_fold{}.pth".format(config['output-dir'],num))
+        else:
+            torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(config['output-dir'] ,best_epoches,num))
+            torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(config['output-dir'],epoch,num))
     #save train params
     train_params = {
         "batch_size": config['batch_size'],
@@ -350,7 +392,7 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = 
         "lr_steps": config['lr-steps'],
         # 添加其他训练参数...
     }
-    with open("{}/train_config.txt".format(config['output-dir']), "w") as f:
+    with open("{}/train_config_fold{}.txt".format(config['output-dir'],num), "w") as f:
         for key, value in train_params.items():
             f.write(f"{key}: {value}\n")
 
@@ -375,12 +417,17 @@ def train(num, sweep_id, sweep_run_name,config,train_dataset,val_dataset,args = 
               "min_s1_e: ",best_err[1],"\n",
               "min_fh1_e: ",best_err[2],"\n",
               "min_fh2_e: ",best_err[3],"\n")
-    #val acc equals the mean error of all points of the last epoch
-    val_accuracy = (s1_abs_error[-1]+sc_abs_error[-1]+fh1_abs_error[-1]+fh2_abs_error[-1])/4
+    #save abs_err as txt
+    if len(sc_abs_error) != 0:
+        with open("{}/abs_error_fold{}.txt".format(config['output-dir'],num), "w") as f:
+            f.write("sc_abs_error: {}\n".format(sc_abs_error))
+            f.write("s1_abs_error: {}\n".format(s1_abs_error))
+            f.write("fh1_abs_error: {}\n".format(fh1_abs_error))
+            f.write("fh2_abs_error: {}\n".format(fh2_abs_error))
     if args == None:
         run.log(dict(val_accuracy=val_accuracy))
         run.finish()
-    return val_accuracy
+    return val_accuracy, config['output-dir']
 
 
 #sweep configuration for wandb swe
