@@ -77,28 +77,12 @@ def cross_validate(args = None):
         sweep_run.finish()
         wandb.sdk.wandb_setup._setup(_reset=True)
         config = dict(sweep_run.config)
-    else:
-        #set params for debug only
+    # Read the entire dataset
+    elif args.debug:
         sweep_id = 'unknown'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
-        config['lr'] = 0.0005
-        config['wd'] = 1e-4
-        config['lr-steps'] = 1
-        config['fixed-size'] = 128
-        config['lr-gamma'] = 0.1
-        config['device'] = 'cuda:0'
-        config['epochs'] = 200
-        config['num_joints'] = 4
         config['data-path'] = 'datasets'
-        config['keypoints_path'] = './spinopelvic_keypoints.json'
-        config['output-dir'] = './save_weights/exp'
-        config['amp'] = True
-        config['savebest'] = True
-        config['resume'] = ''
-        config['with_FFCA'] = True
-        config['start-epoch'] = 0
-    # Read the entire dataset
     dataset = CocoKeypoint(config['data-path'], "allanno", transforms=None, fixed_size=config['fixed-size'])
 
     # Perform k-fold cross-validation
@@ -174,22 +158,44 @@ def train(num,
             config=config,
             reinit=True
         )
+    elif args.debug:
+        #set params for debug only
+        sweep_id = 'unknown'
+        sweep_run_name = 'unknown_2'
+        config = parameters_dict
+        config['lr'] = 0.0005
+        config['wd'] = 1e-4
+        config['lr-steps'] = 1
+        config['fixed-size'] = 128
+        config['lr-gamma'] = 0.1
+        config['device'] = 'cuda:0'
+        config['epochs'] = 25
+        config['num_joints'] = 4
+        config['data-path'] = 'datasets'
+        config['keypoints_path'] = './spinopelvic_keypoints.json'
+        config['output-dir'] = './save_weights/exp'
+        config['amp'] = True
+        config['savebest'] = True
+        config['resume'] = ''
+        config['with_FFCA'] = True
+        config['start-epoch'] = 0
     #convert config to args
-    config = logutils.sweep_override(config)
-    device = torch.device(config['device'] if torch.cuda.is_available() else "cpu")
+    
+    run_config = logutils.sweep_override(config)
+    device = torch.device(run_config['device'] if torch.cuda.is_available() else "cpu")
 
 
     # save coco_info
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
-    with open(config['keypoints_path'], "r") as f:
+    with open(run_config['keypoints_path'], "r") as f:
         person_kps_info = json.load(f)
     #get image size info
-    fixed_size = config['fixed-size']
+    fixed_size = run_config['fixed-size']
     #get heatmap size info(which is 1/4 of image size) 
-    heatmap_hw = (config['fixed-size'][0] // 4, config['fixed-size'][1] // 4)
+    heatmap_hw = (run_config['fixed-size'][0] // 4,run_config['fixed-size'][1] // 4)
     kps_weights = np.array(person_kps_info["kps_weights"],
-                           dtype=np.float32).reshape((config['num_joints'],))
+                           dtype=np.float32).reshape((run_config['num_joints'],))
     data_transform = {
         "train": transforms.Compose([
             #randomly crop a person from the image
@@ -212,13 +218,13 @@ def train(num,
         ])
     }
     #对训练数据集和测试数据集进行预处理
-    train_dataset = MyDataset(config['data-path'],train_dataset, transform=data_transform["train"],train_ids=train_index)
-    val_dataset = MyDataset(config['data-path'],val_dataset, transform=data_transform["val"],train_ids=val_index)
+    train_dataset = MyDataset(run_config['data-path'],train_dataset, transform=data_transform["train"],train_ids=train_index)
+    val_dataset = MyDataset(run_config['data-path'],val_dataset, transform=data_transform["val"],train_ids=val_index)
 
     print("len of train_dataset: ",len(train_dataset),"\n",
               "len of val_dataset: ",len(val_dataset),"\n")
     # 注意这里的collate_fn是自定义的，因为读取的数据包括image和targets，不能直接使用默认的方法合成batch
-    batch_size = config['epochs']
+    batch_size = run_config['epochs']
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers
     print('Using %g dataloader workers' % nw)
 
@@ -241,7 +247,7 @@ def train(num,
                                       collate_fn=val_dataset.collate_fn)
 
     # create model
-    model = create_model(num_joints=config['num_joints'], with_FFCA=config['with_FFCA'])
+    model = create_model(num_joints=run_config['num_joints'], with_FFCA=run_config['with_FFCA'])
     # print(model)
 
     model.to(device)
@@ -250,24 +256,24 @@ def train(num,
     params = [p for p in model.parameters() if p.requires_grad]
     #define adam as optimizer
     optimizer = torch.optim.AdamW(params,
-                                  lr=config['lr'],
-                                  weight_decay=config['wd'])
+                                  lr=run_config['lr'],
+                                  weight_decay=run_config['wd'])
 
-    scaler = torch.cuda.amp.GradScaler() if config['amp'] else None
+    scaler = torch.cuda.amp.GradScaler() if run_config['amp'] else None
 
     # learning rate scheduler
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=config['lr-steps'], gamma=config['lr-gamma'])
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=run_config['lr-steps'], gamma=config['lr-gamma'])
 
     # 如果指定了上次训练保存的权重文件地址，则接着上次结果接着训练
-    if config['resume'] != "":
-        checkpoint = torch.load(config['resume'], map_location='cpu')
+    if run_config['resume'] != "":
+        checkpoint = torch.load(run_config['resume'], map_location='cpu')
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-        config['start-epoch'] = checkpoint['epochs'] + 1
-        if config['amp'] and "scaler" in checkpoint:
+        run_config['start-epoch'] = checkpoint['epochs'] + 1
+        if run_config['amp'] and "scaler" in checkpoint:
             scaler.load_state_dict(checkpoint["scaler"])
-        print("the training process from epoch{}...".format(config['start-epoch']))
+        print("the training process from epoch{}...".format(run_config['start-epoch']))
 
     train_loss = []
     learning_rate = []
@@ -282,7 +288,7 @@ def train(num,
     
 
 #训练主函数
-    for epoch in range(config['start-epoch'], config['epochs']):
+    for epoch in range(run_config['start-epoch'], run_config['epochs']):
         # train for one epoch, printing every 50 iterations
         #利用均方误差作为损失函数
         mean_loss, lr = utils.train_one_epoch(model, optimizer, train_data_loader,
@@ -307,10 +313,10 @@ def train(num,
         #if not os.path.exists("./runs"):
         #    os.makedirs("./runs")
         # 将实验结果写入txt，保存在runs文件夹下
-        if config:
-            results_file = "{}/withFFCA_results_fold{}.txt".format(config['output-dir'], num)  # 修改保存结果的文件路径为"./runs/results.txt"
+        if run_config['with_FFCA']:
+            results_file = "{}/withFFCA_results_fold{}.txt".format(run_config['output-dir'], num)  # 修改保存结果的文件路径为"./runs/results.txt"
         else:
-            results_file = "{}/noFFCA_results_fold{}.txt".format(config['output-dir'], num)
+            results_file = "{}/noFFCA_results_fold{}.txt".format(run_config['output-dir'], num)
         with open(results_file, "a") as f:
             # 写入的数据包括coco指标还有loss和learning rate
             result_info = [f"{i:.4f}" for i in coco_info + [mean_loss.item()]] + [f"{lr:.6f}"]
@@ -341,13 +347,13 @@ def train(num,
             'optimizer': optimizer.state_dict(),
             'lr_scheduler': lr_scheduler.state_dict(),
             'epochs': epoch}
-        if config['amp']:
+        if run_config['amp']:
             save_files["scaler"] = scaler.state_dict()
         if is_save:
             best_model = save_files
             best_epoches = epoch
             # torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
-        if epoch == (config['epochs'] - 1):
+        if epoch == (run_config['epochs'] - 1):
             last_model = save_files
 
     #val acc equals the mean error of all points of the last epoch
@@ -355,22 +361,22 @@ def train(num,
 
     print("val_accuracy: ",val_accuracy,"\n")
     #save best model and last model
-    if config['savebest']:
+    if run_config['savebest']:
         if num == 1:
             #save model for the first run
-            if best_epoches == (config['epochs'] - 1):
-                torch.save(best_model, "{}/best_model_fold{}.pth".format(config['output-dir'],num))
+            if best_epoches == (run_config['epochs'] - 1):
+                torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['output-dir'],num))
             else:
-                torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(config['output-dir'] ,best_epoches,num))
-                torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(config['output-dir'],epoch,num))
+                torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['output-dir'] ,best_epoches,num))
+                torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['output-dir'],epoch,num))
         elif num != 1 & (len(metrics) != 0):
             if val_accuracy <= min(metrics):
                 #save model of current fold
-                if best_epoches == (config['epochs'] - 1):
-                    torch.save(best_model, "{}/best_model_fold{}.pth".format(config['output-dir'],num))
+                if best_epoches == (run_config['epochs'] - 1):
+                    torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['output-dir'],num))
                 else:
-                    torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(config['output-dir'] ,best_epoches,num))
-                    torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(config['output-dir'],epoch,num))
+                    torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['output-dir'] ,best_epoches,num))
+                    torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['output-dir'],epoch,num))
                 #remove the last model
                 assert len(save_path) != 0, "save_path is empty"
                 pthfile = glob.glob(os.path.join(save_path[-1],'*.pth'))
@@ -378,40 +384,40 @@ def train(num,
                     os.remove(f)
     #if not save best then save the model for every fold
     else:
-        if best_epoches == (config['epochs'] - 1):
-            torch.save(best_model, "{}/best_model_fold{}.pth".format(config['output-dir'],num))
+        if best_epoches == (run_config['epochs'] - 1):
+            torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['output-dir'],num))
         else:
-            torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(config['output-dir'] ,best_epoches,num))
-            torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(config['output-dir'],epoch,num))
+            torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['output-dir'] ,best_epoches,num))
+            torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['output-dir'],epoch,num))
     #save train params
     train_params = {
-        "batch_size": config['batch_size'],
-        "learning_rate": config['lr'],
-        "num_epochs": config['epochs'],
-        "weight-decay": config['wd'],
-        "lr_steps": config['lr-steps'],
+        "batch_size": run_config['batch_size'],
+        "learning_rate": run_config['lr'],
+        "num_epochs": run_config['epochs'],
+        "weight-decay": run_config['wd'],
+        "lr_steps": run_config['lr-steps'],
         # 添加其他训练参数...
     }
-    with open("{}/train_config_fold{}.txt".format(config['output-dir'],num), "w") as f:
+    with open("{}/train_config_fold{}.txt".format(run_config['output-dir'],num), "w") as f:
         for key, value in train_params.items():
             f.write(f"{key}: {value}\n")
 
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         from plot_curve import plot_loss_and_lr
-        plot_loss_and_lr(train_loss, val_loss, learning_rate,str(config['output-dir']))
+        plot_loss_and_lr(train_loss, val_loss, learning_rate,str(run_config['output-dir']))
 
     # plot mAP curve
     if len(val_map) != 0:
         from plot_curve import plot_map
-        plot_map(val_map,str(config['output-dir']))
+        plot_map(val_map,str(run_config['output-dir']))
     #plot abs error curve
     if len(sc_abs_error) != 0:
         from plot_curve import plot_abs_error
-        plot_abs_error(sc_abs_error,'sc',str(config['output-dir']))
-        plot_abs_error(s1_abs_error,'s1',str(config['output-dir']))
-        plot_abs_error(fh1_abs_error,'fh1',str(config['output-dir']))
-        plot_abs_error(fh2_abs_error,'fh2',str(config['output-dir']))
+        plot_abs_error(sc_abs_error,'sc',str(run_config['output-dir']))
+        plot_abs_error(s1_abs_error,'s1',str(run_config['output-dir']))
+        plot_abs_error(fh1_abs_error,'fh1',str(run_config['output-dir']))
+        plot_abs_error(fh2_abs_error,'fh2',str(run_config['output-dir']))
     if len(best_err) != 0:
         print("min_sc_e: ",best_err[0],"\n",
               "min_s1_e: ",best_err[1],"\n",
@@ -419,7 +425,7 @@ def train(num,
               "min_fh2_e: ",best_err[3],"\n")
     #save abs_err as txt
     if len(sc_abs_error) != 0:
-        with open("{}/abs_error_fold{}.txt".format(config['output-dir'],num), "w") as f:
+        with open("{}/abs_error_fold{}.txt".format(run_config['output-dir'],num), "w") as f:
             f.write("sc_abs_error: {}\n".format(sc_abs_error))
             f.write("s1_abs_error: {}\n".format(s1_abs_error))
             f.write("fh1_abs_error: {}\n".format(fh1_abs_error))
@@ -427,7 +433,7 @@ def train(num,
     if args == None:
         run.log(dict(val_accuracy=val_accuracy))
         run.finish()
-    return val_accuracy, config['output-dir']
+    return val_accuracy, run_config['output-dir']
 
 
 #sweep configuration for wandb swe
@@ -452,7 +458,7 @@ parameters_dict = {
         'values': ['./spinopelvic_keypoints.json']
         },
     'fixed-size': {
-        'values': [128, 256]
+        'values': [128, 256, 512, 640]
         },
     'num_joints': {
         'values': [4]
@@ -464,7 +470,7 @@ parameters_dict = {
         'values': [0]
         },
     'epochs': {
-        'values': [200]
+        'values': [180]
         },
     'lr-steps': {
         'values': [1, 2, 3, 4, 5, 6]
