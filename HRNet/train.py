@@ -118,10 +118,10 @@ def cross_validate(args = None):
         num += 1
         print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
     #save metrics as txt
-    with open("metrics-{}.txt".format(sweep_id), "w") as f:
+    with open("metrics.txt", "w") as f:
         f.write("metrics: {}\n".format(metrics))
 
-    if args == None:
+    if args == None: 
     # Resume the sweep run
         sweep_run = wandb.init(id=sweep_run_id, resume="must")
         # Log metric to sweep run
@@ -314,9 +314,9 @@ def train(num,
         #    os.makedirs("./runs")
         # 将实验结果写入txt，保存在runs文件夹下
         if run_config['with_FFCA']:
-            results_file = "{}/withFFCA_results_fold{}.txt".format(run_config['output-dir'], num)  # 修改保存结果的文件路径为"./runs/results.txt"
+            results_file = "{}/withFFCA_results_fold{}.txt".format(run_config['last-dir'], num)  # 修改保存结果的文件路径为"./runs/results.txt"
         else:
-            results_file = "{}/noFFCA_results_fold{}.txt".format(run_config['output-dir'], num)
+            results_file = "{}/noFFCA_results_fold{}.txt".format(run_config['last-dir'], num)
         with open(results_file, "a") as f:
             # 写入的数据包括coco指标还有loss和learning rate
             result_info = [f"{i:.4f}" for i in coco_info + [mean_loss.item()]] + [f"{lr:.6f}"]
@@ -365,18 +365,18 @@ def train(num,
         if num == 1:
             #save model for the first run
             if best_epoches == (run_config['epochs'] - 1):
-                torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['output-dir'],num))
+                torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
             else:
-                torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['output-dir'] ,best_epoches,num))
-                torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['output-dir'],epoch,num))
+                torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['last-dir'] ,best_epoches,num))
+                torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['last-dir'],epoch,num))
         elif num != 1 & (len(metrics) != 0):
             if val_accuracy <= min(metrics):
                 #save model of current fold
                 if best_epoches == (run_config['epochs'] - 1):
-                    torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['output-dir'],num))
+                    torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
                 else:
-                    torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['output-dir'] ,best_epoches,num))
-                    torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['output-dir'],epoch,num))
+                    torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['last-dir'] ,best_epoches,num))
+                    torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['last-dir'],epoch,num))
                 #remove the last model
                 assert len(save_path) != 0, "save_path is empty"
                 pthfile = glob.glob(os.path.join(save_path[-1],'*.pth'))
@@ -386,10 +386,10 @@ def train(num,
     #if not save best then save the model for every fold
     else:
         if best_epoches == (run_config['epochs'] - 1):
-            torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['output-dir'],num))
+            torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
         else:
-            torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['output-dir'] ,best_epoches,num))
-            torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['output-dir'],epoch,num))
+            torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['last-dir'] ,best_epoches,num))
+            torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['last-dir'],epoch,num))
     #save train params
     train_params = {
         "batch_size": run_config['batch_size'],
@@ -399,26 +399,26 @@ def train(num,
         "lr_steps": run_config['lr-steps'],
         # 添加其他训练参数...
     }
-    with open("{}/train_config_fold{}.txt".format(run_config['output-dir'],num), "w") as f:
+    with open("{}/train_config_fold{}.txt".format(run_config['last-dir'],num), "w") as f:
         for key, value in train_params.items():
             f.write(f"{key}: {value}\n")
 
     # plot loss and lr curve
     if len(train_loss) != 0 and len(learning_rate) != 0:
         from plot_curve import plot_loss_and_lr
-        plot_loss_and_lr(train_loss, val_loss, learning_rate,str(run_config['output-dir']))
+        plot_loss_and_lr(train_loss, val_loss, learning_rate,str(run_config['last-dir']))
 
     # plot mAP curve
     if len(val_map) != 0:
         from plot_curve import plot_map
-        plot_map(val_map,str(run_config['output-dir']))
+        plot_map(val_map,str(run_config['last-dir']))
     #plot abs error curve
     if len(sc_abs_error) != 0:
         from plot_curve import plot_abs_error
-        plot_abs_error(sc_abs_error,'sc',str(run_config['output-dir']))
-        plot_abs_error(s1_abs_error,'s1',str(run_config['output-dir']))
-        plot_abs_error(fh1_abs_error,'fh1',str(run_config['output-dir']))
-        plot_abs_error(fh2_abs_error,'fh2',str(run_config['output-dir']))
+        plot_abs_error(sc_abs_error,'sc',str(run_config['last-dir']))
+        plot_abs_error(s1_abs_error,'s1',str(run_config['last-dir']))
+        plot_abs_error(fh1_abs_error,'fh1',str(run_config['last-dir']))
+        plot_abs_error(fh2_abs_error,'fh2',str(run_config['last-dir']))
     if len(best_err) != 0:
         print("min_sc_e: ",best_err[0],"\n",
               "min_s1_e: ",best_err[1],"\n",
@@ -426,7 +426,7 @@ def train(num,
               "min_fh2_e: ",best_err[3],"\n")
     #save abs_err as txt
     if len(sc_abs_error) != 0:
-        with open("{}/abs_error_fold{}.txt".format(run_config['output-dir'],num), "w") as f:
+        with open("{}/abs_error_fold{}.txt".format(run_config['last-dir'],num), "w") as f:
             f.write("sc_abs_error: {}\n".format(sc_abs_error))
             f.write("s1_abs_error: {}\n".format(s1_abs_error))
             f.write("fh1_abs_error: {}\n".format(fh1_abs_error))
@@ -434,7 +434,7 @@ def train(num,
     if args == None:
         run.log(dict(val_accuracy=val_accuracy))
         run.finish()
-    return val_accuracy, run_config['output-dir']
+    return val_accuracy, run_config['last-dir']
 
 
 #sweep configuration for wandb swe

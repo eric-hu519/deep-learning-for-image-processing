@@ -82,7 +82,7 @@ def sweep_override(config):
         config['lr-steps'] = [stage1,stage2]
     config['amp'] = bool(config['amp'])
     config['savebest'] = bool(config['savebest'])
-    config['output-dir'] = increment_path(config['output-dir'], mkdir=True)
+    config['last-dir'] = increment_path(config['output-dir'], mkdir=True)
     return config    
 def reset_wandb_env():
     exclude = {
