@@ -51,7 +51,7 @@ def sweep_override(config):
     if config['fixed-size'] < 512:
         config['batch_size'] = 32
     elif config['fixed-size'] == 512 :
-        config['batch_size'] = 28
+        config['batch_size'] = 16
     elif config['fixed-size'] > 512 :
         config['batch_size'] = 16
     config['fixed-size'] = [config['fixed-size'],config['fixed-size']]

@@ -117,15 +117,17 @@ def cross_validate(args = None):
         save_path.append(result[1])
         num += 1
         print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
-    #save metrics as txt
-    with open("metrics.txt", "w") as f:
+    val_accuracy=sum(metrics) / len(metrics)
+    print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(result[2]))
+    #save metrics and val_accuracy as txt
+    with open("{}/metrics.txt".format(result[1]), "w") as f:
         f.write("metrics: {}\n".format(metrics))
-
+        f.write("val_accuracy: {}\n".format(val_accuracy))
     if args == None: 
     # Resume the sweep run
         sweep_run = wandb.init(id=sweep_run_id, resume="must")
         # Log metric to sweep run
-        sweep_run.log(dict(val_accuracy=sum(metrics) / len(metrics)))
+        sweep_run.log(dict(val_accuracy))
         sweep_run.finish()
 
         print("*" * 40)
@@ -163,18 +165,18 @@ def train(num,
         sweep_id = 'unknown'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
-        config['lr'] = 0.0005
+        config['lr'] = 0.00055
         config['wd'] = 1e-4
         config['lr-steps'] = 1
         config['fixed-size'] = 128
         config['lr-gamma'] = 0.1
         config['device'] = 'cuda:0'
-        config['epochs'] = 25
+        config['epochs'] = 180
         config['num_joints'] = 4
         config['data-path'] = 'datasets'
         config['keypoints_path'] = './spinopelvic_keypoints.json'
         config['output-dir'] = './save_weights/exp'
-        config['amp'] = True
+        config['amp'] = False
         config['savebest'] = True
         config['resume'] = ''
         config['with_FFCA'] = True
@@ -284,7 +286,7 @@ def train(num,
     fh2_abs_error = []
     val_loss = []
     best_err = np.zeros((4,))
-
+    best_fold = 1
     
 
 #训练主函数
@@ -372,6 +374,7 @@ def train(num,
         elif num != 1 & (len(metrics) != 0):
             if val_accuracy <= min(metrics):
                 #save model of current fold
+                best_fold = num
                 if best_epoches == (run_config['epochs'] - 1):
                     torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
                 else:
@@ -434,7 +437,7 @@ def train(num,
     if args == None:
         run.log(dict(val_accuracy=val_accuracy))
         run.finish()
-    return val_accuracy, run_config['last-dir']
+    return val_accuracy, run_config['last-dir'], best_fold
 
 
 #sweep configuration for wandb swe
@@ -459,7 +462,7 @@ parameters_dict = {
         'values': ['./spinopelvic_keypoints.json']
         },
     'fixed-size': {
-        'values': [128, 256, 512, 640]
+        'values': [256,512]
         },
     'num_joints': {
         'values': [4]
@@ -492,7 +495,7 @@ parameters_dict = {
         'max': 0.005
         },
     'amp': {
-        'values': [True]
+        'values': [False]
         },
     'savebest': {
         'values': [True]
