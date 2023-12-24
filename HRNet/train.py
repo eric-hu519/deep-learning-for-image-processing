@@ -64,7 +64,8 @@ from sklearn.model_selection import KFold
 
 def cross_validate(args = None):
     num_kfold = 10
-    if args == None:
+    #如果args为空，则为sweep模式
+    if args is None:
         sweep_run = wandb.init()
         sweep_id = sweep_run.sweep_id or "unknown"
         sweep_url = sweep_run.get_sweep_url()
@@ -78,13 +79,14 @@ def cross_validate(args = None):
         wandb.sdk.wandb_setup._setup(_reset=True)
         config = dict(sweep_run.config)
     # Read the entire dataset
-    elif args.debug:
+    #DEBUG模式下,args.debug = True
+    else:
         sweep_id = 'unknown'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
         config['data-path'] = 'datasets'
     dataset = CocoKeypoint(config['data-path'], "allanno", transforms=None, fixed_size=config['fixed-size'])
-
+    print("len of dataset: ",len(dataset),"\n")
     # Perform k-fold cross-validation
     kf = KFold(n_splits= num_kfold)
     metrics = []
@@ -92,9 +94,10 @@ def cross_validate(args = None):
     num = 1
     for train_index, val_index in kf.split(dataset):
         #reset env for each fold
-        if args == None:
+        if args is None:
             logutils.reset_wandb_env()
         print(val_index)
+        print(config['fixed-size'])
         # Create train and validation datasets based on the fold indices
         train_dataset = data.Subset(dataset, train_index)
         val_dataset = data.Subset(dataset, val_index)
@@ -111,19 +114,23 @@ def cross_validate(args = None):
             train_index = train_index,
             val_index = val_index,
             metrics = metrics,
-            save_path = save_path
+            save_path = save_path,
         )
         metrics.append(result[0])
         save_path.append(result[1])
         num += 1
         print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
+        if isinstance(config['fixed-size'],list):
+            config['fixed-size'] = config['fixed-size'][0]
     val_accuracy=sum(metrics) / len(metrics)
-    print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(result[2]))
+    #get the postion of the minimum number in metrics
+    best_fold = metrics.index(min(metrics))+1
+    print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(best_fold))
     #save metrics and val_accuracy as txt
-    with open("{}/metrics.txt".format(result[1]), "w") as f:
+    with open("{}/metrics.txt".format(result[1]), "a") as f:
         f.write("metrics: {}\n".format(metrics))
         f.write("val_accuracy: {}\n".format(val_accuracy))
-    if args == None: 
+    if args is None: 
     # Resume the sweep run
         sweep_run = wandb.init(id=sweep_run_id, resume="must")
         # Log metric to sweep run
@@ -144,7 +151,8 @@ def train(num,
           sweep_run_name,
           config,
           train_dataset,
-          val_dataset,args = None,
+          val_dataset,
+          args = None,
           train_index = None,
           val_index = None, 
           metrics = None, 
@@ -152,7 +160,7 @@ def train(num,
     #set run_name for each fold
     run_name = f'{sweep_run_name}-{num}'
     
-    if args == None:
+    if args is None:
         run = wandb.init(
             group=sweep_id,
             job_type=sweep_run_name,
@@ -160,23 +168,24 @@ def train(num,
             config=config,
             reinit=True
         )
-    elif args.debug:
+    else:
         #set params for debug only
         sweep_id = 'unknown'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
-        config['lr'] = 0.00055
+        config['lr'] = 0.00085
         config['wd'] = 1e-4
         config['lr-steps'] = 1
         config['fixed-size'] = 128
+
         config['lr-gamma'] = 0.1
         config['device'] = 'cuda:0'
-        config['epochs'] = 180
+        config['epochs'] = 3
         config['num_joints'] = 4
         config['data-path'] = 'datasets'
         config['keypoints_path'] = './spinopelvic_keypoints.json'
         config['output-dir'] = './save_weights/exp'
-        config['amp'] = False
+        config['amp'] = True
         config['savebest'] = True
         config['resume'] = ''
         config['with_FFCA'] = True
@@ -192,6 +201,13 @@ def train(num,
 
     with open(run_config['keypoints_path'], "r") as f:
         person_kps_info = json.load(f)
+        #sweep for best weights by setting weights of keypoints
+        if args is None:
+            person_kps_info["kps_weights"][0] = run_config['s1_weight']
+            person_kps_info["kps_weights"][1] = run_config['sc_weight']
+            person_kps_info["kps_weights"][2] = run_config['fh1_weight']
+            person_kps_info["kps_weights"][3] = run_config['fh2_weight']
+        print("keypoints weights: ",person_kps_info["kps_weights"],"\n")
     #get image size info
     fixed_size = run_config['fixed-size']
     #get heatmap size info(which is 1/4 of image size) 
@@ -226,7 +242,7 @@ def train(num,
     print("len of train_dataset: ",len(train_dataset),"\n",
               "len of val_dataset: ",len(val_dataset),"\n")
     # 注意这里的collate_fn是自定义的，因为读取的数据包括image和targets，不能直接使用默认的方法合成batch
-    batch_size = run_config['epochs']
+    batch_size = run_config['batch_size']
     nw = min([os.cpu_count(), batch_size if batch_size > 1 else 0, 8])  # number of workers
     print('Using %g dataloader workers' % nw)
 
@@ -286,7 +302,7 @@ def train(num,
     fh2_abs_error = []
     val_loss = []
     best_err = np.zeros((4,))
-    best_fold = 1
+    
     
 
 #训练主函数
@@ -341,8 +357,8 @@ def train(num,
             best_err[3] = fh2_abs_error[-1]
         
         is_save = check_loss_list(val_loss, val_loss[-1])
-        if args == None:
-            run.log(logutils.wandb_log(epoch, train_loss[-1], coco_info, best_err))
+        if args is None:
+            run.log(logutils.wandb_log(train_loss[-1], coco_info, best_err))
         # save weights
         save_files = {
             'model': model.state_dict(),
@@ -373,8 +389,8 @@ def train(num,
                 torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['last-dir'],epoch,num))
         elif num != 1 & (len(metrics) != 0):
             if val_accuracy <= min(metrics):
+                print("new best model for fold {} saved \n".format(num))
                 #save model of current fold
-                best_fold = num
                 if best_epoches == (run_config['epochs'] - 1):
                     torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
                 else:
@@ -400,28 +416,14 @@ def train(num,
         "num_epochs": run_config['epochs'],
         "weight-decay": run_config['wd'],
         "lr_steps": run_config['lr-steps'],
+        "keypoints weight": person_kps_info["kps_weights"]
         # 添加其他训练参数...
     }
     with open("{}/train_config_fold{}.txt".format(run_config['last-dir'],num), "w") as f:
         for key, value in train_params.items():
             f.write(f"{key}: {value}\n")
 
-    # plot loss and lr curve
-    if len(train_loss) != 0 and len(learning_rate) != 0:
-        from plot_curve import plot_loss_and_lr
-        plot_loss_and_lr(train_loss, val_loss, learning_rate,str(run_config['last-dir']))
-
-    # plot mAP curve
-    if len(val_map) != 0:
-        from plot_curve import plot_map
-        plot_map(val_map,str(run_config['last-dir']))
-    #plot abs error curve
-    if len(sc_abs_error) != 0:
-        from plot_curve import plot_abs_error
-        plot_abs_error(sc_abs_error,'sc',str(run_config['last-dir']))
-        plot_abs_error(s1_abs_error,'s1',str(run_config['last-dir']))
-        plot_abs_error(fh1_abs_error,'fh1',str(run_config['last-dir']))
-        plot_abs_error(fh2_abs_error,'fh2',str(run_config['last-dir']))
+    
     if len(best_err) != 0:
         print("min_sc_e: ",best_err[0],"\n",
               "min_s1_e: ",best_err[1],"\n",
@@ -434,16 +436,16 @@ def train(num,
             f.write("s1_abs_error: {}\n".format(s1_abs_error))
             f.write("fh1_abs_error: {}\n".format(fh1_abs_error))
             f.write("fh2_abs_error: {}\n".format(fh2_abs_error))
-    if args == None:
+    if args is None:
         run.log(dict(val_accuracy=val_accuracy))
         run.finish()
-    return val_accuracy, run_config['last-dir'], best_fold
+    return val_accuracy, run_config['last-dir']
 
 
 #sweep configuration for wandb swe
 sweep_config = {
     'method': 'bayes',
-    'name': 'spine-sweep-test-1',
+    'name': 'spine-sweep',
     'metric': {
         'goal': 'minimize',
         'name': 'val_accuracy'
@@ -462,7 +464,7 @@ parameters_dict = {
         'values': ['./spinopelvic_keypoints.json']
         },
     'fixed-size': {
-        'values': [256,512]
+        'values': [128,256,512,640]
         },
     'num_joints': {
         'values': [4]
@@ -495,19 +497,31 @@ parameters_dict = {
         'max': 0.005
         },
     'amp': {
-        'values': [False]
+        'values': [True]
         },
     'savebest': {
         'values': [True]
         },
     'debug':{
-        'values': [False]
+        'values': [True]
         },
     'resume':{
         'values': ['']
         },
     'with_FFCA':{
         'values': [True]
+        },
+    's1_weight':{
+        'values': [1,1.5,2,2.5,3,3.5,4,4.5,5]
+        },  
+    'sc_weight':{
+        'values': [1,1.5,2,2.5,3,3.5,4,4.5,5]
+        },
+    'fh1_weight':{
+        'values': [1,1.5,2,2.5,3,3.5,4,4.5,5]
+        },
+    'fh2_weight':{
+        'values': [1,1.5,2,2.5,3,3.5,4,4.5,5]
         }
     }
 #add params to sweep_config
@@ -517,18 +531,19 @@ def main(args):
     
     if not args.debug:
         wandb.login()
-        sweep_id = wandb.sweep(sweep_config, project='sweep-test')
+        sweep_id = wandb.sweep(sweep_config, project='sweep-test-final')
         #制定运行方程为cross_validate
         wandb.agent(sweep_id, function=cross_validate)
         wandb.finish()
     else:
+        #只有debug模式下args才不为空
         cross_validate(args)
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(
         description=__doc__)
-    parser.add_argument('--debug', default=True, help='debug mode')
+    parser.add_argument('--debug', default=False, help='debug mode')
     args = parser.parse_args()
     main(args)
 
