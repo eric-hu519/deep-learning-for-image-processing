@@ -49,12 +49,12 @@ def sweep_override(config):
     #limit_batch to avoid cuda overdrive
     run_config = config
     if config['fixed-size'] < 512:
-        run_config['batch_size'] = 64
+        run_config['batch_size'] = 128
     elif config['fixed-size'] == 512 :
-        run_config['batch_size'] = 28
+        run_config['batch_size'] = 48
         
     elif config['fixed-size']== 640 :
-        config['batch_size'] = 16
+        config['batch_size'] = 32
     else:
         config['batch_size'] = 12
     run_config['fixed-size'] = [config['fixed-size'],config['fixed-size']]
@@ -97,3 +97,6 @@ def reset_wandb_env():
         if key.startswith("WANDB_") and key not in exclude:
             del os.environ[key]
     
+
+class TrainingException(Exception):
+    pass

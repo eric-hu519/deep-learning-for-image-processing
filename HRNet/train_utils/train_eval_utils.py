@@ -9,7 +9,7 @@ import transforms
 import train_utils.distributed_utils as utils
 from .coco_eval import EvalCOCOMetric
 from .loss import KpLoss
-
+from .logutils import TrainingException
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
                     print_freq=50, warmup=False, scaler=None):
@@ -47,7 +47,8 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         if not math.isfinite(loss_value):  # 当计算的损失为无穷大时停止训练
             print("Loss is {}, stopping training".format(loss_value))
             print(loss_dict_reduced)
-            sys.exit(1)
+            #sys.exit(1)
+            raise TrainingException
 
         optimizer.zero_grad()
         if scaler is not None:
@@ -95,7 +96,9 @@ def eval_loss(model,  data_loader, device, epoch,
         if not math.isfinite(loss_value):  # 当计算的损失为无穷大时停止训练
             print("Loss is {}, stopping training".format(loss_value))
             print(loss_dict_reduced)
-            sys.exit(1)
+            #sys.exit(1)
+            #raise exception for sweep Cross Validation
+            raise TrainingException
         return mloss
 @torch.no_grad()
 def evaluate(model, data_loader, device, flip=False):

@@ -13,6 +13,7 @@ from mydataset_kfold import MyDataset
 from train_utils import train_eval_utils as utils
 import wandb
 from train_utils import logutils
+
 import random
 
 def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
@@ -91,45 +92,62 @@ def cross_validate(args = None):
     kf = KFold(n_splits= num_kfold)
     metrics = []
     save_path = []
-    num = 1
+    num = 0
+    failed_fold = []
     for train_index, val_index in kf.split(dataset):
         #reset env for each fold
         if args is None:
             logutils.reset_wandb_env()
+        
         print(val_index)
         print(config['fixed-size'])
         # Create train and validation datasets based on the fold indices
         train_dataset = data.Subset(dataset, train_index)
         val_dataset = data.Subset(dataset, val_index)
-    
-        # Train the model using the train dataset
-        result = train(
-            sweep_id=sweep_id,
-            num=num,
-            sweep_run_name=sweep_run_name,
-            config=config,  # Specify training parameters
-            train_dataset=train_dataset,
-            val_dataset=val_dataset,
-            args=args,
-            train_index = train_index,
-            val_index = val_index,
-            metrics = metrics,
-            save_path = save_path,
-        )
-        metrics.append(result[0])
-        save_path.append(result[1])
         num += 1
-        print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
-        if isinstance(config['fixed-size'],list):
-            config['fixed-size'] = config['fixed-size'][0]
-    val_accuracy=sum(metrics) / len(metrics)
-    #get the postion of the minimum number in metrics
-    best_fold = metrics.index(min(metrics))+1
-    print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(best_fold))
-    #save metrics and val_accuracy as txt
-    with open("{}/metrics.txt".format(result[1]), "a") as f:
-        f.write("metrics: {}\n".format(metrics))
-        f.write("val_accuracy: {}\n".format(val_accuracy))
+        try:
+            # Train the model using the train dataset
+            result = train(
+                sweep_id=sweep_id,
+                num=num,
+                sweep_run_name=sweep_run_name,
+                config=config,  # Specify training parameters
+                train_dataset=train_dataset,
+                val_dataset=val_dataset,
+                args=args,
+                train_index = train_index,
+                val_index = val_index,
+                metrics = metrics,
+                save_path = save_path,
+            )
+            metrics.append(result[0])
+            save_path.append(result[1])
+           
+            print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
+            
+        #terminate current fold if training failed
+        except logutils.TrainingException:
+            print("Training failed for fold {}. Starting next fold.".format(num))
+            failed_fold.append(num)
+    if len(metrics) == 0:
+        val_accuracy = -1
+        print("metrics is empty! Cross Val FAILED!!!!!!!!")
+        
+    else:
+        val_accuracy=sum(metrics) / len(metrics)
+        #get the postion of the minimum number in metrics
+        #TODO if theres failed fold, best fold position might be wrong
+        best_fold = metrics.index(min(metrics))+1
+        print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(best_fold))
+        if len(failed_fold) != 0:
+            print("failed fold: ",failed_fold)
+        #save metrics and val_accuracy as txt
+        with open("{}/metrics.txt".format(result[1]), "a") as f:
+            f.write("metrics: {}\n".format(metrics))
+            f.write("val_accuracy: {}\n".format(val_accuracy))
+            #记录失败的fold
+            if len(failed_fold) != 0:
+                f.write("failed_fold: {}\n".format(failed_fold))
     if args is None: 
     # Resume the sweep run
         sweep_run = wandb.init(id=sweep_run_id, resume="must")
@@ -191,7 +209,8 @@ def train(num,
         config['with_FFCA'] = True
         config['start-epoch'] = 0
     #convert config to args
-    
+    if isinstance(config['fixed-size'],list):
+        config['fixed-size'] = config['fixed-size'][0]
     run_config = logutils.sweep_override(config)
     device = torch.device(run_config['device'] if torch.cuda.is_available() else "cpu")
 
@@ -464,7 +483,7 @@ parameters_dict = {
         'values': ['./spinopelvic_keypoints.json']
         },
     'fixed-size': {
-        'values': [128,256,512,640]
+        'values': [128,256,512,640,1024]
         },
     'num_joints': {
         'values': [4]
@@ -531,7 +550,7 @@ def main(args):
     
     if not args.debug:
         wandb.login()
-        sweep_id = wandb.sweep(sweep_config, project='sweep-test-final')
+        sweep_id = wandb.sweep(sweep_config, project='Spine-test-final')
         #制定运行方程为cross_validate
         wandb.agent(sweep_id, function=cross_validate)
         wandb.finish()
