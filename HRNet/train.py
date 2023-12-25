@@ -39,8 +39,8 @@ def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
                     #del weights_dict[k]import argparse
 
     missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
-    if len(missing_keys) != 0:
-        print("missing_keys: ", missing_keys, "\n", "unexpected_keys: ", unexpected_keys)
+    #if len(missing_keys) != 0:
+        #print("missing_keys: ", missing_keys, "\n", "unexpected_keys: ", unexpected_keys)
             # 添加缺失的权重和偏置
             #for key in missing_keys:
                 #if 'weight' in key:
@@ -69,7 +69,9 @@ def cross_validate(args = None):
     if args is None:
         sweep_run = wandb.init()
         sweep_id = sweep_run.sweep_id or "unknown"
+        print("sweep_id: ",sweep_id,"\n")
         sweep_url = sweep_run.get_sweep_url()
+
         project_url = sweep_run.get_project_url()
         sweep_group_url = f'{project_url}/groups/{sweep_id}'
         sweep_run.notes = sweep_group_url
@@ -99,8 +101,8 @@ def cross_validate(args = None):
         if args is None:
             logutils.reset_wandb_env()
         
-        print(val_index)
-        print(config['fixed-size'])
+        print("current val \n", val_index)
+        # print(config['fixed-size'])
         # Create train and validation datasets based on the fold indices
         train_dataset = data.Subset(dataset, train_index)
         val_dataset = data.Subset(dataset, val_index)
@@ -137,22 +139,30 @@ def cross_validate(args = None):
         val_accuracy=sum(metrics) / len(metrics)
         #get the postion of the minimum number in metrics
         #TODO if theres failed fold, best fold position might be wrong
+        #将failed fold插入到metrics中，防止best_fold位置错误
+        if len(failed_fold) != 0:   
+            for i in failed_fold:
+                metrics.insert(i-1,-1)
+        #get the best fold
         best_fold = metrics.index(min(metrics))+1
+        
+        
         print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(best_fold))
         if len(failed_fold) != 0:
             print("failed fold: ",failed_fold)
         #save metrics and val_accuracy as txt
-        with open("{}/metrics.txt".format(result[1]), "a") as f:
+        with open("sweep_log/run-{}-metrics.txt".format(sweep_run_id), "w") as f:
             f.write("metrics: {}\n".format(metrics))
             f.write("val_accuracy: {}\n".format(val_accuracy))
             #记录失败的fold
             if len(failed_fold) != 0:
                 f.write("failed_fold: {}\n".format(failed_fold))
     if args is None: 
-    # Resume the sweep run
+        print("finishing current sweep run...")
+        # Resume the sweep run
         sweep_run = wandb.init(id=sweep_run_id, resume="must")
         # Log metric to sweep run
-        sweep_run.log(dict(val_accuracy))
+        sweep_run.log(dict(val_accuracy =val_accuracy))
         sweep_run.finish()
 
         print("*" * 40)
@@ -212,12 +222,14 @@ def train(num,
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
     run_config = logutils.sweep_override(config)
+    #print("run_config: ",run_config,"\n")
     device = torch.device(run_config['device'] if torch.cuda.is_available() else "cpu")
 
 
     # save coco_info
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-
+    print("*" * 40)
+    print("*" * 40)
     with open(run_config['keypoints_path'], "r") as f:
         person_kps_info = json.load(f)
         #sweep for best weights by setting weights of keypoints
@@ -321,7 +333,7 @@ def train(num,
     fh2_abs_error = []
     val_loss = []
     best_err = np.zeros((4,))
-    
+    is_last_epoch = False
     
 
 #训练主函数
@@ -339,10 +351,11 @@ def train(num,
         lr_scheduler.step()
 
         mloss = utils.eval_loss(model, val_data_loader, device=device, epoch=epoch, scaler=scaler)
-
+        if epoch == (run_config['epochs'] - 1):
+            is_last_epoch = True
         # evaluate on the test dataset
         coco_info = utils.evaluate(model, val_data_loader, device=device,
-                                   flip=True)
+                                   flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['last-dir']))
         coco_info.append(mloss.item())
 
         print("val_loss: ", coco_info[14],"\n")
@@ -396,7 +409,7 @@ def train(num,
     #val acc equals the mean error of all points of the last epoch
     val_accuracy = (s1_abs_error[-1]+sc_abs_error[-1]+fh1_abs_error[-1]+fh2_abs_error[-1])/4
 
-    print("val_accuracy: ",val_accuracy,"\n")
+    print("fold {}----val_accuracy: ".format(num),val_accuracy,"\n")
     #save best model and last model
     if run_config['savebest']:
         if num == 1:
@@ -420,7 +433,7 @@ def train(num,
                 pthfile = glob.glob(os.path.join(save_path[-1],'*.pth'))
                 for f in pthfile:
                     os.remove(f)
-                print("new best model saved \n","remove last model of fold{}!".format(num))
+                print("new best model saved \n","removing the last best model}!")
     #if not save best then save the model for every fold
     else:
         if best_epoches == (run_config['epochs'] - 1):
@@ -430,11 +443,13 @@ def train(num,
             torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['last-dir'],epoch,num))
     #save train params
     train_params = {
+        "fixed-size": run_config['fixed-size'],
         "batch_size": run_config['batch_size'],
         "learning_rate": run_config['lr'],
         "num_epochs": run_config['epochs'],
         "weight-decay": run_config['wd'],
         "lr_steps": run_config['lr-steps'],
+        "lr_gamma": run_config['lr-gamma'],
         "keypoints weight": person_kps_info["kps_weights"]
         # 添加其他训练参数...
     }
@@ -448,6 +463,8 @@ def train(num,
               "min_s1_e: ",best_err[1],"\n",
               "min_fh1_e: ",best_err[2],"\n",
               "min_fh2_e: ",best_err[3],"\n")
+    print("*" * 40)
+    print("*" * 40)
     #save abs_err as txt
     if len(sc_abs_error) != 0:
         with open("{}/abs_error_fold{}.txt".format(run_config['last-dir'],num), "w") as f:
@@ -483,7 +500,7 @@ parameters_dict = {
         'values': ['./spinopelvic_keypoints.json']
         },
     'fixed-size': {
-        'values': [128,256,512,640,1024]
+        'values': [128,256,512,640]
         },
     'num_joints': {
         'values': [4]
@@ -495,7 +512,7 @@ parameters_dict = {
         'values': [0]
         },
     'epochs': {
-        'values': [180]
+        'values': [185]
         },
     'lr-steps': {
         'values': [1, 2, 3, 4, 5, 6]
@@ -543,14 +560,16 @@ parameters_dict = {
         'values': [1,1.5,2,2.5,3,3.5,4,4.5,5]
         }
     }
-#add params to sweep_config
-sweep_config['parameters'] = parameters_dict
+
+
 #main function for sweep
 def main(args):
-    
+    #add params to sweep_config
+    sweep_config['parameters'] = parameters_dict
     if not args.debug:
         wandb.login()
-        sweep_id = wandb.sweep(sweep_config, project='Spine-test-final')
+        sweep_id = wandb.sweep(sweep_config, project='Spine-final')   
+        #print("sweep_id: ",sweep_id,"\n")
         #制定运行方程为cross_validate
         wandb.agent(sweep_id, function=cross_validate)
         wandb.finish()

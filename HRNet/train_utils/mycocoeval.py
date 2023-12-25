@@ -120,7 +120,7 @@ class COCOeval:
         self.evalImgs = defaultdict(list)   # per-image per-category evaluation results
         self.eval     = {}                  # accumulated evaluation results
 
-    def evaluate(self):
+    def evaluate(self, is_last_epoch=False, save_dir=None):
         '''
         Run per image evaluation on given images and store results (a list of dict) in self.evalImgs
         :return: None
@@ -158,8 +158,9 @@ class COCOeval:
         evaluateImg = self.evaluateImg
         #计算各点的平均误差值
         self.error = np.array(self.error)
-        #save error to txt
-        #np.savetxt('error.txt',self.error)
+        #save last epoch error to txt
+        if is_last_epoch and save_dir is not None:
+            np.savetxt(save_dir+'/error.txt', self.error)
         self.error = np.mean(self.error, axis=0)#按列求平均值
         maxDet = p.maxDets[-1]
         self.evalImgs = [evaluateImg(imgId, catId, areaRng, maxDet)
@@ -474,7 +475,8 @@ class COCOeval:
                 mean_s = -1
             else:
                 mean_s = np.mean(s[s>-1])
-            print(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s))
+            #print results
+            #print(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s))
             return mean_s
         def _summarizeDets():
             stats = np.zeros((12,))

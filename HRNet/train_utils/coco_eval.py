@@ -113,7 +113,7 @@ class EvalCOCOMetric:
             with open(self.results_file_name, 'w') as json_file:
                 json_file.write(json_str)
 
-    def evaluate(self):
+    def evaluate(self, is_last_epoch=False, save_dir=None):
         # 只在主进程上评估即可
         if is_main_process():
             # accumulate predictions from all images
@@ -122,7 +122,7 @@ class EvalCOCOMetric:
 
             self.coco_evaluator = COCOeval(cocoGt=coco_true, cocoDt=coco_pre, iouType=self.iou_type)
 
-            self.coco_evaluator.evaluate()
+            self.coco_evaluator.evaluate(is_last_epoch, save_dir)
             self.coco_evaluator.accumulate()
             print(f"IoU metric: {self.iou_type}")
             self.coco_evaluator.summarize()

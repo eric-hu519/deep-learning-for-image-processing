@@ -101,7 +101,7 @@ def eval_loss(model,  data_loader, device, epoch,
             raise TrainingException
         return mloss
 @torch.no_grad()
-def evaluate(model, data_loader, device, flip=False):
+def evaluate(model, data_loader, device, flip=False, is_last_epoch=False, save_dir=None):
     if flip:
         print("Warning: flip is enabled but flip_pairs is not provided.")
 
@@ -145,7 +145,7 @@ def evaluate(model, data_loader, device, flip=False):
     key_metric.synchronize_results()
 
     if utils.is_main_process():
-        coco_info = key_metric.evaluate()
+        coco_info = key_metric.evaluate(is_last_epoch, save_dir)
     else:
         coco_info = None
 
