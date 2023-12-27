@@ -568,10 +568,16 @@ def main(args):
     sweep_config['parameters'] = parameters_dict
     if not args.debug:
         wandb.login()
-        sweep_id = wandb.sweep(sweep_config, project='Spine-final')   
-        #print("sweep_id: ",sweep_id,"\n")
-        #制定运行方程为cross_validate
-        wandb.agent(sweep_id, function=cross_validate)
+        if args.resume:
+            #resume mode
+            #need to set resume for sweep control in wandb.ai
+            sweep_id = args.sweep_id
+            wandb.agent(sweep_id, function=cross_validate,project='Spine-final')
+        else:
+            sweep_id = wandb.sweep(sweep_config, project='Spine-final')   
+            #print("sweep_id: ",sweep_id,"\n")
+            #制定运行方程为cross_validate
+            wandb.agent(sweep_id, function=cross_validate)
         wandb.finish()
     else:
         #只有debug模式下args才不为空
@@ -582,6 +588,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__)
     parser.add_argument('--debug', default=False, help='debug mode')
+    parser.add_argument('--resume', default=True, help='resume mode')
+    parser.add_argument('--sweep_id', default='4zcm6syv', help='sweep id')
     args = parser.parse_args()
     main(args)
 
