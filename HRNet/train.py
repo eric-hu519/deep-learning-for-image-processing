@@ -572,9 +572,9 @@ def main(args):
             #resume mode
             #need to set resume for sweep control in wandb.ai
             sweep_id = args.sweep_id
-            wandb.agent(sweep_id, function=cross_validate,project='Spine-final')
+            wandb.agent(sweep_id, function = cross_validate,project = args.project)
         else:
-            sweep_id = wandb.sweep(sweep_config, project='Spine-final')   
+            sweep_id = wandb.sweep(sweep_config, project = args.project)   
             #print("sweep_id: ",sweep_id,"\n")
             #制定运行方程为cross_validate
             wandb.agent(sweep_id, function=cross_validate)
@@ -590,6 +590,7 @@ if __name__ == '__main__':
     parser.add_argument('--debug', default=False, help='debug mode')
     parser.add_argument('--resume', default=True, help='resume mode')
     parser.add_argument('--sweep_id', default='4zcm6syv', help='sweep id')
+    parser.add_argument('--project',default='Spine-final',help='project name')
     args = parser.parse_args()
     main(args)
 
