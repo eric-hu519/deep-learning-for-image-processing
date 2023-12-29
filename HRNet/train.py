@@ -127,10 +127,12 @@ def cross_validate(args = None):
            
             print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
             
+            sweep_run.log(dict(fold_val_acc =result[0]))
         #terminate current fold if training failed
         except logutils.TrainingException:
             print("Training failed for fold {}. Starting next fold.".format(num))
             failed_fold.append(num)
+            sweep_run.log(dict(fold_val_acc =-1))
     if len(metrics) == 0:
         val_accuracy = -1
         print("metrics is empty! Cross Val FAILED!!!!!!!!")
