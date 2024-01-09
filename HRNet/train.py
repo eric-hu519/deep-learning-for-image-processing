@@ -18,7 +18,7 @@ import random
 
 def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
     #base_channel=32 means HRnet-w32
-    model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA)
+    model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=True, skip_connection=True)
     
     if load_pretrain_weights:
         # 载入预训练模型权重
@@ -86,12 +86,13 @@ def cross_validate(args = None):
     else:
         sweep_id = 'unknown'
         sweep_run_name = 'unknown_2'
+        sweep_run_id = 'unknown_test'
         config = parameters_dict
         config['data-path'] = 'datasets'
     dataset = CocoKeypoint(config['data-path'], "allanno", transforms=None, fixed_size=config['fixed-size'])
     print("len of dataset: ",len(dataset),"\n")
     # Perform k-fold cross-validation
-    kf = KFold(n_splits= num_kfold)
+    kf = KFold(n_splits= num_kfold,shuffle=True,random_state=1)
     metrics = []
     save_path = []
     num = 0
@@ -127,12 +128,12 @@ def cross_validate(args = None):
            
             print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
             
-            sweep_run.log(dict(fold_val_acc =result[0]))
+            
         #terminate current fold if training failed
         except logutils.TrainingException:
             print("Training failed for fold {}. Starting next fold.".format(num))
             failed_fold.append(num)
-            sweep_run.log(dict(fold_val_acc =-1))
+            
     if len(metrics) == 0:
         val_accuracy = -1
         print("metrics is empty! Cross Val FAILED!!!!!!!!")
@@ -200,17 +201,17 @@ def train(num,
         )
     else:
         #set params for debug only
-        sweep_id = 'unknown'
+        sweep_id = 'unknown_test'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
-        config['lr'] = 0.00085
+        config['lr'] = 0.001127
         config['wd'] = 1e-4
-        config['lr-steps'] = 1
-        config['fixed-size'] = 128
+        config['lr-steps'] = 2
+        config['fixed-size'] = 512
 
-        config['lr-gamma'] = 0.1
+        config['lr-gamma'] = 0.263
         config['device'] = 'cuda:0'
-        config['epochs'] = 3
+        config['epochs'] = 185
         config['num_joints'] = 4
         config['data-path'] = 'datasets'
         config['keypoints_path'] = './spinopelvic_keypoints.json'
@@ -220,6 +221,10 @@ def train(num,
         config['resume'] = ''
         config['with_FFCA'] = True
         config['start-epoch'] = 0
+        config['s1_weight'] = 4.5
+        config['sc_weight'] = 5
+        config['fh1_weight'] = 1
+        config['fh2_weight'] = 5
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
@@ -235,11 +240,11 @@ def train(num,
     with open(run_config['keypoints_path'], "r") as f:
         person_kps_info = json.load(f)
         #sweep for best weights by setting weights of keypoints
-        if args is None:
-            person_kps_info["kps_weights"][0] = run_config['s1_weight']
-            person_kps_info["kps_weights"][1] = run_config['sc_weight']
-            person_kps_info["kps_weights"][2] = run_config['fh1_weight']
-            person_kps_info["kps_weights"][3] = run_config['fh2_weight']
+        
+        person_kps_info["kps_weights"][0] = run_config['s1_weight']
+        person_kps_info["kps_weights"][1] = run_config['sc_weight']
+        person_kps_info["kps_weights"][2] = run_config['fh1_weight']
+        person_kps_info["kps_weights"][3] = run_config['fh2_weight']
         print("keypoints weights: ",person_kps_info["kps_weights"],"\n")
     #get image size info
     fixed_size = run_config['fixed-size']
@@ -547,7 +552,7 @@ parameters_dict = {
         'values': ['']
         },
     'with_FFCA':{
-        'values': [True]
+        'values': [False]
         },
     's1_weight':{
         'values': [1,1.5,2,2.5,3,3.5,4,4.5,5]
@@ -567,6 +572,13 @@ parameters_dict = {
 #main function for sweep
 def main(args):
     #add params to sweep_config
+    random.seed(3407)
+    np.random.seed(3407)
+    torch.manual_seed(3407)
+    torch.cuda.manual_seed(3407)
+    torch.cuda.manual_seed_all(3407)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     sweep_config['parameters'] = parameters_dict
     if not args.debug:
         wandb.login()
@@ -589,9 +601,9 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(
         description=__doc__)
-    parser.add_argument('--debug', default=False, help='debug mode')
-    parser.add_argument('--resume', default=True, help='resume mode')
-    parser.add_argument('--sweep_id', default='4zcm6syv', help='sweep id')
+    parser.add_argument('--debug', default=True, help='debug mode')
+    parser.add_argument('--resume', default=False, help='resume mode')
+    parser.add_argument('--sweep_id', default='f5cyaw6i', help='sweep id')
     parser.add_argument('--project',default='Spine-final',help='project name')
     args = parser.parse_args()
     main(args)
