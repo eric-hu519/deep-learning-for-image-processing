@@ -16,9 +16,9 @@ from train_utils import logutils
 
 import random
 
-def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True):
+def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True, spatial_attention=True, skip_connection=True,swap_att=False):
     #base_channel=32 means HRnet-w32
-    model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=True, skip_connection=True)
+    model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=spatial_attention, skip_connection=skip_connection,swap_att=swap_att)
     
     if load_pretrain_weights:
         # 载入预训练模型权重
@@ -92,7 +92,7 @@ def cross_validate(args = None):
     dataset = CocoKeypoint(config['data-path'], "allanno", transforms=None, fixed_size=config['fixed-size'])
     print("len of dataset: ",len(dataset),"\n")
     # Perform k-fold cross-validation
-    kf = KFold(n_splits= num_kfold,shuffle=True,random_state=1)
+    kf = KFold(n_splits= num_kfold,shuffle=True,random_state=3407)
     metrics = []
     save_path = []
     num = 0
@@ -154,7 +154,7 @@ def cross_validate(args = None):
         if len(failed_fold) != 0:
             print("failed fold: ",failed_fold)
         #save metrics and val_accuracy as txt
-        with open("sweep_log/run-{}-metrics.txt".format(sweep_run_id), "w") as f:
+        with open("sweep_log/run-{}-metrics.txt".format(sweep_run_id), "a") as f:
             f.write("metrics: {}\n".format(metrics))
             f.write("val_accuracy: {}\n".format(val_accuracy))
             #记录失败的fold
@@ -209,7 +209,7 @@ def train(num,
         config['lr-steps'] = 2
         config['fixed-size'] = 512
 
-        config['lr-gamma'] = 0.263
+        config['lr-gamma'] = 0.27
         config['device'] = 'cuda:0'
         config['epochs'] = 185
         config['num_joints'] = 4
@@ -223,7 +223,7 @@ def train(num,
         config['start-epoch'] = 0
         config['s1_weight'] = 4.5
         config['sc_weight'] = 5
-        config['fh1_weight'] = 1
+        config['fh1_weight'] = 2
         config['fh2_weight'] = 5
     #convert config to args
     if isinstance(config['fixed-size'],list):

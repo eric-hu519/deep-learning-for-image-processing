@@ -164,12 +164,13 @@ class StageModule(nn.Module):
 
 #num_joints,表示关节点个数
 class HighResolutionNet(nn.Module):
-    def __init__(self, base_channel: int = 32, num_joints: int = 4, with_FFCA = True, spatial_attention = True, skip_connection = True):
+    def __init__(self, base_channel: int = 32, num_joints: int = 4, with_FFCA = True, spatial_attention = True, skip_connection = True, swap_att = False):
         super().__init__()
         # Stem
         self.with_FFCA = with_FFCA
         self.skip_connection = skip_connection
         self.with_spacial = spatial_attention
+        self.swap_att = swap_att
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
@@ -258,12 +259,17 @@ class HighResolutionNet(nn.Module):
             #StageModule(input_branches=4, output_branches=1, c=base_channel)
         )
 
-        if self.with_spacial:
+        if self.with_spacial & (not self.swap_att):
             self.spatial_attention = SPAtt()
+        elif self.with_spacial & self.swap_att:
+            self.cha_att1 = Channel_ATT(base_channel, self.swap_att)
+            self.cha_att2 = Channel_ATT(base_channel*2, self.swap_att)
+            self.cha_att3 = Channel_ATT(base_channel*4, self.swap_att)
+            self.cha_att4 = Channel_ATT(base_channel*8, self.swap_att)
         if not with_FFCA:
             self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel))
         else:
-            self.decoder = myDecoder(base_channel)
+            self.decoder = myDecoder(base_channel,self.swap_att)
         
         # Final layer，通道个数要与num_joints一致
         self.final_layer = nn.Conv2d(base_channel, num_joints, kernel_size=1, stride=1)
@@ -303,7 +309,7 @@ class HighResolutionNet(nn.Module):
 
         x = self.stage4(x)
         #print("x[0]: ", x[0].shape, "\n", "x[1]: ", x[1].shape, "\n", "x[2]: ", x[2].shape, "\n", "x[3]: ", x[3].shape, "\n")
-        if self.skip_connection & self.with_spacial: 
+        if self.skip_connection & self.with_spacial & (not self.swap_att): 
         #conbine skip connection
             skip_1 = skip_1 + x[0]
             skip_2 = skip_2 + x[1]
@@ -318,6 +324,16 @@ class HighResolutionNet(nn.Module):
             x[1] = x[1] + skip_2
             x[2] = x[2] + skip_3
             x[3] = x[3] + skip_4
+        elif self.swap_att:
+
+            skip_1 = skip_1 + x[0]
+            skip_2 = skip_2 + x[1]
+            skip_3 = skip_3 + x[2]
+            skip_4 = skip_4 + x[3]
+            x[0] = x[0] * self.cha_att1(skip_1)
+            x[1] = x[1] * self.cha_att2(skip_2)
+            x[2] = x[2] * self.cha_att3(skip_3)
+            x[3] = x[3] * self.cha_att4(skip_4)
         if self.with_FFCA:
             x = self.decoder(x)
             x = self.final_layer(x)
@@ -334,13 +350,14 @@ class myFFCA(nn.Module):
     """
     FFCA - Fusion Feature Channel Attention Module
     """
-    def __init__(self, low_channel,high_channel):#输入为低级分支的通道个数
+    def __init__(self, low_channel,high_channel,swap_att = False):#输入为低级分支的通道个数
         super().__init__()
         #low_branch size should be (batch_size, 2*high_channel, height/2, width/2)
 
-
+        self.swap_att = swap_att
         self.low_channle = low_channel
         self.high_channle = high_channel
+        self.sigmoid = nn.Sigmoid()
         #process input branch
         self.inbranch_process = nn.Sequential(
             #upsample, make lowchannel's H,W double and equals to highchannel's H,W
@@ -348,13 +365,11 @@ class myFFCA(nn.Module):
             #3*3conv, make lowchannel's channel equals to highchannel's channel
             nn.Conv2d(self.low_channle, self.high_channle,3,padding=1)
         )
-        # Average and Max Pooling
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)#tensor size should be (batch_size, channel, 1, 1) after pooling
-        self.max_pool = nn.AdaptiveMaxPool2d(1)
-
-        self.fc = nn.Linear(self.low_channle, self.low_channle//2)
-        self.sigmoid = nn.Sigmoid()
-        self.relu = nn.ReLU(inplace=True)
+        #Swap position for channel att and spatial att
+        if self.swap_att:
+            self.Spa_ATT = SPAtt()
+        else:
+            self.Channel_ATT = Channel_ATT(self.low_channle, self.swap_att)
         self.output = nn.Sequential(
             #3*3conv
             nn.Conv2d(self.low_channle, self.high_channle,3,padding=1),
@@ -364,17 +379,10 @@ class myFFCA(nn.Module):
         up_lowbranch = self.inbranch_process(low_branch)
         #concatenate two branch
         concat_branch = torch.cat((up_lowbranch, high_branch), 1)#channle*2
-        maxpooled_branch = self.max_pool(concat_branch)
-        avgpooled_branch = self.avg_pool(concat_branch)
-
-        #change size from[batch_size, channel, 1, 1] to [batch_size, channel]
-        maxpooled_branch_flat = maxpooled_branch.view(maxpooled_branch.size(0), -1)
-        avgpooled_branch_flat = avgpooled_branch.view(avgpooled_branch.size(0), -1)
-
-        # Pass the tensors through the fully connected layer
-        feature_weight = self.relu(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
-        #restore the size of weight from[batch_size, channel] to [batch_size, channel, 1, 1]
-        feature_weight = feature_weight.view(feature_weight.size(0), feature_weight.size(1), 1, 1)
+        if self.swap_att:
+            feature_weight = self.Spa_ATT(concat_branch)
+        else:
+            feature_weight = self.Channel_ATT(concat_branch)
 
         weighted_branch = feature_weight * up_lowbranch
 
@@ -389,12 +397,12 @@ class myDecoder(nn.Module):
     """
     Decoder with FFCA modules.
     """
-    def __init__(self,basechannel):
+    def __init__(self,basechannel,swap_att = False):
         super().__init__()
         #from higher ffca to lower ffca
-        self.ffca3 = myFFCA(2*basechannel,basechannel)
-        self.ffca2 = myFFCA(4*basechannel,2*basechannel)
-        self.ffca1 = myFFCA(8*basechannel,4*basechannel)
+        self.ffca3 = myFFCA(2*basechannel,basechannel, swap_att)
+        self.ffca2 = myFFCA(4*basechannel,2*basechannel, swap_att)
+        self.ffca1 = myFFCA(8*basechannel,4*basechannel, swap_att)
         
     def forward(self, x):
         branch3, branch2, branch1, branch0 = x
@@ -412,7 +420,8 @@ class SPAtt(nn.Module):
         super().__init__()
         self.con1 = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
         self.sigmoid = nn.Sigmoid()
-
+    #input is a tensor with size (batch_size, channel, height, width)
+    #output is a tensor with size (batch_size, 1, height, width)
     def forward(self, x):
         max_out, _ = torch.max(x, dim=1, keepdim=True)
         avg_out = torch.mean(x, dim=1, keepdim=True)
@@ -422,3 +431,36 @@ class SPAtt(nn.Module):
         out = self.sigmoid(out)
         return out
 
+class Channel_ATT(nn.Module):
+    """
+    Channel Attention Module
+    """
+    def __init__(self, low_channel, swap_att = False):
+        super().__init__()
+        self.low_channle = low_channel
+        self.swap_att = swap_att
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        if not self.swap_att:
+            self.fc = nn.Linear(self.low_channle, self.low_channle//2)
+        else:
+            self.fc = nn.Linear(self.low_channle, self.low_channle)
+        self.sigmoid = nn.Sigmoid()
+        self.relu = nn.ReLU(inplace=True)
+        
+    def forward(self, x):
+        maxpooled_branch = self.max_pool(x)
+        avgpooled_branch = self.avg_pool(x)
+
+        #change size from[batch_size, channel, 1, 1] to [batch_size, channel]
+        maxpooled_branch_flat = maxpooled_branch.view(maxpooled_branch.size(0), -1)
+        avgpooled_branch_flat = avgpooled_branch.view(avgpooled_branch.size(0), -1)
+        # Pass the tensors through the fully connected layer
+        feature_weight = self.relu(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
+
+        
+        #restore the size of weight from[batch_size, channel] to [batch_size, channel, 1, 1]
+        feature_weight = feature_weight.view(feature_weight.size(0), feature_weight.size(1), 1, 1)
+        
+
+        return feature_weight
