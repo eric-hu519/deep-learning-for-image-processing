@@ -16,7 +16,7 @@ from train_utils import logutils
 
 import random
 
-def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True, spatial_attention=True, skip_connection=True,swap_att=False):
+def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True, spatial_attention=True, skip_connection=True,swap_att=True):
     #base_channel=32 means HRnet-w32
     model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=spatial_attention, skip_connection=skip_connection,swap_att=swap_att)
     
@@ -141,7 +141,6 @@ def cross_validate(args = None):
     else:
         val_accuracy=sum(metrics) / len(metrics)
         #get the postion of the minimum number in metrics
-        #TODO if theres failed fold, best fold position might be wrong
         #将failed fold插入到metrics中，防止best_fold位置错误
         if len(failed_fold) != 0:   
             for i in failed_fold:
@@ -303,7 +302,8 @@ def train(num,
                                       collate_fn=val_dataset.collate_fn)
 
     # create model
-    model = create_model(num_joints=run_config['num_joints'], with_FFCA=run_config['with_FFCA'])
+    #model = create_model(num_joints=run_config['num_joints'], with_FFCA=run_config['with_FFCA'])
+    model = create_model(num_joints=run_config['num_joints'])
     # print(model)
 
     model.to(device)

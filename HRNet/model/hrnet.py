@@ -420,6 +420,7 @@ class SPAtt(nn.Module):
         super().__init__()
         self.con1 = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
         self.sigmoid = nn.Sigmoid()
+        self.bn = nn.BatchNorm2d(1, momentum=BN_MOMENTUM)
     #input is a tensor with size (batch_size, channel, height, width)
     #output is a tensor with size (batch_size, 1, height, width)
     def forward(self, x):
@@ -428,6 +429,8 @@ class SPAtt(nn.Module):
         #print("avg_out.shape: ", avg_out.shape)
         out = torch.cat([max_out, avg_out], dim=1)
         out = self.con1(out)
+
+        out = self.bn(out)
         out = self.sigmoid(out)
         return out
 
