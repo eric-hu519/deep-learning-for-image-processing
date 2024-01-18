@@ -78,6 +78,7 @@ class COCOeval:
         self.stats = []                     # result summarization
         self.ious = {}  
         self.error = []                    # ious between all gts and dts
+        self.std = []                      # std of error
         if not cocoGt is None:
             self.params.imgIds = sorted(cocoGt.getImgIds())
             self.params.catIds = sorted(cocoGt.getCatIds())
@@ -161,7 +162,10 @@ class COCOeval:
         #save last epoch error to txt
         if is_last_epoch and save_dir is not None:
             np.savetxt(save_dir+'/error.txt', self.error)
+        self.std = np.std(self.error, axis=0)#按列求标准差
+        #print(self.std.shape)
         self.error = np.mean(self.error, axis=0)#按列求平均值
+        
         maxDet = p.maxDets[-1]
         self.evalImgs = [evaluateImg(imgId, catId, areaRng, maxDet)
                  for catId in catIds
@@ -494,7 +498,7 @@ class COCOeval:
             stats[11] = _summarize(0, areaRng='large', maxDets=self.params.maxDets[2])
             return stats
         def _summarizeKps():
-            stats = np.zeros((14,))
+            stats = np.zeros((18,))
             stats[0] = _summarize(1, maxDets=20)
             stats[1] = _summarize(1, maxDets=20, iouThr=.5)
             stats[2] = _summarize(1, maxDets=20, iouThr=.75)
@@ -507,12 +511,15 @@ class COCOeval:
             stats[9] = _summarize(0, maxDets=20, areaRng='large')
             for i in range(10,14):
                 stats[i] = self.error[i-10]
-            print('mean abs error:\n',
-                   'SC= ', stats[10],'\n', 
-                   'S1= ',stats[11],'\n', 
-                   'F1C= ',stats[12],'\n',
-                   'F2C= ',stats[13])
+                stats[i+4] = self.std[i-10]
+            print('mean abs error and std:\n',
+                   'SC= ', stats[10],'\t','std= ',stats[14],'\n', 
+                   'S1= ',stats[11],'\t','std= ',stats[15],'\n', 
+                   'F1C= ',stats[12],'\t','std= ',stats[16],'\n',
+                   'F2C= ',stats[13],'\t','std= ',stats[17])
+            
             self.error={}
+            self.std={}
             return stats
         if not self.eval:
             raise Exception('Please run accumulate() first')

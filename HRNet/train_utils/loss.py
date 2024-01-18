@@ -2,7 +2,7 @@ import torch
 
 
 class KpLoss(object):
-    def __init__(self, centerloss = True):
+    def __init__(self, centerloss = False):
         self.centerloss = centerloss
         self.criterion = torch.nn.MSELoss(reduction='none')
     def __call__(self, logits, targets):

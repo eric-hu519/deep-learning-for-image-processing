@@ -445,9 +445,9 @@ class Channel_ATT(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
         if not self.swap_att:
-            self.fc = nn.Linear(self.low_channle, self.low_channle//2)
+            self.fc = nn.Linear(self.low_channle, self.low_channle//2, bias=False)
         else:
-            self.fc = nn.Linear(self.low_channle, self.low_channle)
+            self.fc = nn.Linear(self.low_channle, self.low_channle, bias=False)
         self.sigmoid = nn.Sigmoid()
         self.relu = nn.ReLU(inplace=True)
         

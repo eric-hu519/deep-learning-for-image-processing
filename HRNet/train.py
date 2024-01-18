@@ -16,7 +16,7 @@ from train_utils import logutils
 
 import random
 
-def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True, spatial_attention=True, skip_connection=True,swap_att=True):
+def create_model(num_joints, load_pretrain_weights=False, with_FFCA=False, spatial_attention=False, skip_connection=False,swap_att=False):
     #base_channel=32 means HRnet-w32
     model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=spatial_attention, skip_connection=skip_connection,swap_att=swap_att)
     
@@ -38,7 +38,7 @@ def create_model(num_joints, load_pretrain_weights=True, with_FFCA=True, spatial
                 #if weights_dict[k].shape[0] != num_joints:
                     #del weights_dict[k]import argparse
 
-    missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
+    #missing_keys, unexpected_keys = model.load_state_dict(weights_dict, strict=False)
     #if len(missing_keys) != 0:
         #print("missing_keys: ", missing_keys, "\n", "unexpected_keys: ", unexpected_keys)
             # 添加缺失的权重和偏置
@@ -137,6 +137,12 @@ def cross_validate(args = None):
     if len(metrics) == 0:
         val_accuracy = -1
         print("metrics is empty! Cross Val FAILED!!!!!!!!")
+        print("finishing current sweep run...")
+        # Resume the sweep run
+        sweep_run = wandb.init(id=sweep_run_id, resume="must")
+        # Log metric to sweep run
+        sweep_run.log(dict(val_accuracy =val_accuracy))
+        sweep_run.finish()
         
     else:
         val_accuracy=sum(metrics) / len(metrics)
@@ -203,14 +209,14 @@ def train(num,
         sweep_id = 'unknown_test'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
-        config['lr'] = 0.001127
+        config['lr'] = 0.02
         config['wd'] = 1e-4
         config['lr-steps'] = 2
         config['fixed-size'] = 512
 
-        config['lr-gamma'] = 0.27
+        config['lr-gamma'] = 0.1
         config['device'] = 'cuda:0'
-        config['epochs'] = 185
+        config['epochs'] = 210
         config['num_joints'] = 4
         config['data-path'] = 'datasets'
         config['keypoints_path'] = './spinopelvic_keypoints.json'
@@ -218,7 +224,7 @@ def train(num,
         config['amp'] = True
         config['savebest'] = True
         config['resume'] = ''
-        config['with_FFCA'] = True
+        config['with_FFCA'] = False
         config['start-epoch'] = 0
         config['s1_weight'] = 4.5
         config['sc_weight'] = 5
@@ -338,6 +344,10 @@ def train(num,
     s1_abs_error = []
     fh1_abs_error = []
     fh2_abs_error = []
+    sc_std = []
+    s1_std = []
+    fh1_std = []
+    fh2_std = []
     val_loss = []
     best_err = np.zeros((4,))
     is_last_epoch = False
@@ -365,7 +375,7 @@ def train(num,
                                    flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['last-dir']))
         coco_info.append(mloss.item())
 
-        print("val_loss: ", coco_info[14],"\n")
+        print("val_loss: ", coco_info[-1],"\n")
         #检查runs文件夹是否存在，若不存在则创建
         #if not os.path.exists("./runs"):
         #    os.makedirs("./runs")
@@ -385,7 +395,12 @@ def train(num,
         sc_abs_error.append(coco_info[11])
         fh1_abs_error.append(coco_info[12])
         fh2_abs_error.append(coco_info[13])
-        val_loss.append(coco_info[14])
+        s1_std.append(coco_info[14])
+        sc_std.append(coco_info[15])
+        fh1_std.append(coco_info[16])
+        fh2_std.append(coco_info[17])
+
+        val_loss.append(coco_info[-1])
         if check_loss_list(s1_abs_error, s1_abs_error[-1]):
             best_err[0] = s1_abs_error[-1]
         if check_loss_list(sc_abs_error, sc_abs_error[-1]):
@@ -479,6 +494,10 @@ def train(num,
             f.write("s1_abs_error: {}\n".format(s1_abs_error))
             f.write("fh1_abs_error: {}\n".format(fh1_abs_error))
             f.write("fh2_abs_error: {}\n".format(fh2_abs_error))
+            f.write("sc_std: {}\n".format(sc_std))
+            f.write("s1_std: {}\n".format(s1_std))
+            f.write("fh1_std: {}\n".format(fh1_std))
+            f.write("fh2_std: {}\n".format(fh2_std))
     if args is None:
         run.log(dict(val_accuracy=val_accuracy))
         run.finish()
