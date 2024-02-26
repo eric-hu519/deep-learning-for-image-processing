@@ -49,9 +49,9 @@ def sweep_override(config):
     #limit_batch to avoid cuda overdrive
     run_config = config
     if config['fixed-size'] < 512:
-        run_config['batch_size'] = 128
+        run_config['batch_size'] = 64
     elif config['fixed-size'] == 512 :
-        run_config['batch_size'] = 48
+        run_config['batch_size'] = 32
         
     elif config['fixed-size']== 640 :
         config['batch_size'] = 32
@@ -86,6 +86,7 @@ def sweep_override(config):
     run_config['amp'] = bool(config['amp'])
     run_config['savebest'] = bool(config['savebest'])
     run_config['last-dir'] = increment_path(config['output-dir'], mkdir=True)
+    run_config['test-dir'] = increment_path(config['test-dir'], mkdir=True)
     return run_config    
 def reset_wandb_env():
     exclude = {

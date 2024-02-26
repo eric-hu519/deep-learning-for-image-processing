@@ -16,9 +16,9 @@ from train_utils import logutils
 
 import random
 
-def create_model(num_joints, load_pretrain_weights=False, with_FFCA=False, spatial_attention=False, skip_connection=False,swap_att=False):
+def create_model(num_joints, load_pretrain_weights=False, with_FFCA=True, spatial_attention=True, skip_connection=True,swap_att=True):
     #base_channel=32 means HRnet-w32
-    model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=spatial_attention, skip_connection=skip_connection,swap_att=swap_att)
+    model = HighResolutionNet(base_channel=18, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=spatial_attention, skip_connection=skip_connection,swap_att=swap_att)
     
     if load_pretrain_weights:
         # 载入预训练模型权重
@@ -91,95 +91,132 @@ def cross_validate(args = None):
         config['data-path'] = 'datasets'
     dataset = CocoKeypoint(config['data-path'], "allanno", transforms=None, fixed_size=config['fixed-size'])
     print("len of dataset: ",len(dataset),"\n")
-    # Perform k-fold cross-validation
-    kf = KFold(n_splits= num_kfold,shuffle=True,random_state=3407)
     metrics = []
     save_path = []
     num = 0
     failed_fold = []
-    for train_index, val_index in kf.split(dataset):
-        #reset env for each fold
-        if args is None:
-            logutils.reset_wandb_env()
-        
-        print("current val \n", val_index)
-        # print(config['fixed-size'])
-        # Create train and validation datasets based on the fold indices
+    if args.use_kfold:
+    # Perform k-fold cross-validation
+        kf = KFold(n_splits= num_kfold, shuffle=False)
+       
+    else:
+    #split dataset into train, val and test
+        train_size = int(0.8 * len(dataset))
+        val_size = int(0.1 * len(dataset))
+        test_size = len(dataset) - train_size - val_size
+        # 确保训练集、验证集和测试集的大小之和等于数据集的总大小
+        assert train_size + val_size + test_size == len(dataset)
+
+        indices = list(range(len(dataset)))
+
+        np.random.seed(3407)
+        np.random.shuffle(indices)
+
+        train_index = indices[:train_size]
+        val_index = indices[train_size:train_size + val_size]
+        test_index = indices[train_size + val_size:]
+
+        #generate datasets
         train_dataset = data.Subset(dataset, train_index)
         val_dataset = data.Subset(dataset, val_index)
-        num += 1
-        try:
-            # Train the model using the train dataset
-            result = train(
-                sweep_id=sweep_id,
-                num=num,
-                sweep_run_name=sweep_run_name,
-                config=config,  # Specify training parameters
-                train_dataset=train_dataset,
-                val_dataset=val_dataset,
-                args=args,
-                train_index = train_index,
-                val_index = val_index,
-                metrics = metrics,
-                save_path = save_path,
-            )
-            metrics.append(result[0])
-            save_path.append(result[1])
-           
-            print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
+        test_dataset = data.Subset(dataset, test_index)
+    
+    if args.use_kfold:
+
+        for train_index, val_index in kf.split(dataset):
+            #reset env for each fold
+            if args is None:
+                logutils.reset_wandb_env()
+            
+            print("current val \n", val_index)
+            # print(config['fixed-size'])
+            # Create train and validation datasets based on the fold indices
+            train_dataset = data.Subset(dataset, train_index)
+            val_dataset = data.Subset(dataset, val_index)
+            num += 1
+            try:
+                # Train the model using the train dataset
+                result = train(
+                    sweep_id=sweep_id,
+                    num=num,
+                    sweep_run_name=sweep_run_name,
+                    config=config,  # Specify training parameters
+                    train_dataset=train_dataset,
+                    val_dataset=val_dataset,
+                    args=args,
+                    train_index = train_index,
+                    val_index = val_index,
+                    metrics = metrics,
+                    save_path = save_path,
+                )
+                metrics.append(result[0])
+                save_path.append(result[1])
+                torch.cuda.empty_cache()
+                print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
+                
+                
+            #terminate current fold if training failed
+            except logutils.TrainingException:
+                print("Training failed for fold {}. Starting next fold.".format(num))
+                failed_fold.append(num)
+                
+        if len(metrics) == 0:
+            val_accuracy = -1
+            print("metrics is empty! Cross Val FAILED!!!!!!!!")
+            
+        else:
+            val_accuracy=sum(metrics) / len(metrics)
+            #get the postion of the minimum number in metrics
+            #将failed fold插入到metrics中，防止best_fold位置错误
+            if len(failed_fold) != 0:   
+                for i in failed_fold:
+                    metrics.insert(i-1,-1)
+            #get the best fold
+            best_fold = metrics.index(min(metrics))+1
             
             
-        #terminate current fold if training failed
-        except logutils.TrainingException:
-            print("Training failed for fold {}. Starting next fold.".format(num))
-            failed_fold.append(num)
-            
-    if len(metrics) == 0:
-        val_accuracy = -1
-        print("metrics is empty! Cross Val FAILED!!!!!!!!")
-        print("finishing current sweep run...")
-        # Resume the sweep run
-        sweep_run = wandb.init(id=sweep_run_id, resume="must")
-        # Log metric to sweep run
-        sweep_run.log(dict(val_accuracy =val_accuracy))
-        sweep_run.finish()
-        
-    else:
-        val_accuracy=sum(metrics) / len(metrics)
-        #get the postion of the minimum number in metrics
-        #将failed fold插入到metrics中，防止best_fold位置错误
-        if len(failed_fold) != 0:   
-            for i in failed_fold:
-                metrics.insert(i-1,-1)
-        #get the best fold
-        best_fold = metrics.index(min(metrics))+1
-        
-        
-        print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(best_fold))
-        if len(failed_fold) != 0:
-            print("failed fold: ",failed_fold)
-        #save metrics and val_accuracy as txt
-        with open("sweep_log/run-{}-metrics.txt".format(sweep_run_id), "a") as f:
-            f.write("metrics: {}\n".format(metrics))
-            f.write("val_accuracy: {}\n".format(val_accuracy))
-            #记录失败的fold
+            print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(best_fold))
             if len(failed_fold) != 0:
-                f.write("failed_fold: {}\n".format(failed_fold))
-    if args is None: 
-        print("finishing current sweep run...")
-        # Resume the sweep run
-        sweep_run = wandb.init(id=sweep_run_id, resume="must")
-        # Log metric to sweep run
-        sweep_run.log(dict(val_accuracy =val_accuracy))
-        sweep_run.finish()
+                print("failed fold: ",failed_fold)
+            #save metrics and val_accuracy as txt
+            with open("sweep_log/run-{}-metrics.txt".format(sweep_run_id), "a") as f:
+                f.write("metrics: {}\n".format(metrics))
+                f.write("val_accuracy: {}\n".format(val_accuracy))
+                #记录失败的fold
+                if len(failed_fold) != 0:
+                    f.write("failed_fold: {}\n".format(failed_fold))
+        if args is None: 
+            print("finishing current sweep run...")
+            # Resume the sweep run
+            sweep_run = wandb.init(id=sweep_run_id, resume="must")
+            # Log metric to sweep run
+            sweep_run.log(dict(val_accuracy =val_accuracy))
+            sweep_run.finish()
 
-        print("*" * 40)
-        print("Sweep URL:       ", sweep_url)
-        print("Sweep Group URL: ", sweep_group_url)
-        print("*" * 40)
+            print("*" * 40)
+            print("Sweep URL:       ", sweep_url)
+            print("Sweep Group URL: ", sweep_group_url)
+            print("*" * 40)
 
+    #Not use kfold
+    else:
 
-
+            # Train the model using the train dataset
+        result = train(
+            sweep_id=sweep_id,
+            num=num,
+            sweep_run_name=sweep_run_name,
+            config=config,  # Specify training parameters
+            train_dataset=train_dataset,
+            val_dataset=val_dataset,
+            args=args,
+            train_index = train_index,
+            val_index = val_index,
+            metrics = metrics,
+            save_path = save_path,
+            test_dataset=test_dataset,
+            test_index = test_index
+        )
 
 
 def train(num, 
@@ -192,7 +229,9 @@ def train(num,
           train_index = None,
           val_index = None, 
           metrics = None, 
-          save_path = None):
+          save_path = None,
+          test_dataset = None,
+          test_index = None):
     #set run_name for each fold
     run_name = f'{sweep_run_name}-{num}'
     
@@ -209,27 +248,28 @@ def train(num,
         sweep_id = 'unknown_test'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
-        config['lr'] = 0.02
+        config['lr'] = 0.00372
         config['wd'] = 1e-4
         config['lr-steps'] = 2
-        config['fixed-size'] = 512
+        config['fixed-size'] = 256
 
-        config['lr-gamma'] = 0.1
+        config['lr-gamma'] = 0.27
         config['device'] = 'cuda:0'
-        config['epochs'] = 210
+        config['epochs'] = 180 
         config['num_joints'] = 4
         config['data-path'] = 'datasets'
         config['keypoints_path'] = './spinopelvic_keypoints.json'
         config['output-dir'] = './save_weights/exp'
-        config['amp'] = True
+        config['test-dir'] = './save_weights/test'
+        config['amp'] = False
         config['savebest'] = True
         config['resume'] = ''
-        config['with_FFCA'] = False
+        config['with_FFCA'] = True
         config['start-epoch'] = 0
-        config['s1_weight'] = 4.5
-        config['sc_weight'] = 5
-        config['fh1_weight'] = 2
-        config['fh2_weight'] = 5
+        config['s1_weight'] = 1
+        config['sc_weight'] = 1
+        config['fh1_weight'] = 1
+        config['fh2_weight'] = 1
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
@@ -281,6 +321,9 @@ def train(num,
     #对训练数据集和测试数据集进行预处理
     train_dataset = MyDataset(run_config['data-path'],train_dataset, transform=data_transform["train"],train_ids=train_index)
     val_dataset = MyDataset(run_config['data-path'],val_dataset, transform=data_transform["val"],train_ids=val_index)
+    if test_dataset is not None:
+        print("\n~~~~test dataset detected!~~~\n")
+        test_dataset = MyDataset(run_config['data-path'],test_dataset, transform=data_transform["val"], train_ids=test_index) 
 
     print("len of train_dataset: ",len(train_dataset),"\n",
               "len of val_dataset: ",len(val_dataset),"\n")
@@ -306,6 +349,13 @@ def train(num,
                                       pin_memory=True,
                                       num_workers=nw,
                                       collate_fn=val_dataset.collate_fn)
+    if test_dataset is not None:
+        test_data_loader = data.DataLoader(test_dataset,
+                                      batch_size=batch_size,
+                                      shuffle=False,
+                                      pin_memory=True,
+                                      num_workers=nw,
+                                      collate_fn=test_dataset.collate_fn)
 
     # create model
     #model = create_model(num_joints=run_config['num_joints'], with_FFCA=run_config['with_FFCA'])
@@ -368,9 +418,35 @@ def train(num,
         lr_scheduler.step()
 
         mloss = utils.eval_loss(model, val_data_loader, device=device, epoch=epoch, scaler=scaler)
+        #for the last epoch only, evaluate on test dataset
         if epoch == (run_config['epochs'] - 1):
             is_last_epoch = True
+            if test_dataset is not None:
+                test_loss = utils.eval_loss(model, test_data_loader, device=device, epoch=epoch, scaler=scaler)
+                print("test_loss: ", test_loss.item(), "\n")
+                test_info = utils.evaluate(model, test_data_loader, device=device,
+                                          flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['test-dir']))
+                test_info.append(test_loss.item())
+                #test_val_map= test_info[1]  # @0.5 mAP
+                test_s1_abs_error = test_info[10]
+                test_sc_abs_error = test_info[11]
+                test_fh1_abs_error = test_info[12]
+                test_fh2_abs_error = test_info[13]
+                test_s1_std = test_info[14]
+                test_sc_std = test_info[15]
+                test_fh1_std = test_info[16]
+                test_fh2_std = test_info[17]
+                test_accurracy = (test_s1_abs_error+test_sc_abs_error+test_fh1_abs_error+test_fh2_abs_error)/4
+                print("test_accuracy: ",test_accurracy,"\n")
+                test_info.append(test_accurracy)
+                results_file = "{}test_result.txt".format(run_config['test-dir'])
+                with open(results_file, "a") as f:
+                    # 写入的数据包括coco指标还有loss和learning rate
+                    result_info = [f"{i:.4f}" for i in test_info] + [f"{lr:.6f}"]
+                    txt = "epoch:{} {}".format(epoch, '  '.join(result_info))
+                    f.write(txt + "\n")
         # evaluate on the test dataset
+        # is last epoch is used to save the best model and run results
         coco_info = utils.evaluate(model, val_data_loader, device=device,
                                    flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['last-dir']))
         coco_info.append(mloss.item())
@@ -430,8 +506,9 @@ def train(num,
 
     #val acc equals the mean error of all points of the last epoch
     val_accuracy = (s1_abs_error[-1]+sc_abs_error[-1]+fh1_abs_error[-1]+fh2_abs_error[-1])/4
-
     print("fold {}----val_accuracy: ".format(num),val_accuracy,"\n")
+
+
     #save best model and last model
     if run_config['savebest']:
         if num == 1:
@@ -614,6 +691,7 @@ def main(args):
         wandb.finish()
     else:
         #只有debug模式下args才不为空
+        #debug mode will not use wandb
         cross_validate(args)
 
 if __name__ == '__main__':
@@ -624,6 +702,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', default=False, help='resume mode')
     parser.add_argument('--sweep_id', default='f5cyaw6i', help='sweep id')
     parser.add_argument('--project',default='Spine-final',help='project name')
+    parser.add_argument('--use_kfold', default = False, help='use kfold cross validation')
     args = parser.parse_args()
     main(args)
 
