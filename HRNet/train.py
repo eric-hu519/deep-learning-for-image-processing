@@ -16,10 +16,22 @@ from train_utils import logutils
 
 import random
 
-def create_model(num_joints, load_pretrain_weights=False, with_FFCA=True, spatial_attention=False, skip_connection=True,swap_att=False,use_rfca=True,all_rfca=False):
+def create_model(num_joints, load_pretrain_weights=False, with_FFCA=True, 
+                 spatial_attention=False, skip_connection=True,swap_att=False,
+                 use_rfca=True,all_rfca=False, mix_c=True):
     #base_channel=32 means HRnet-w32
-    model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=spatial_attention, skip_connection=skip_connection,swap_att=swap_att,use_rfca=use_rfca,all_rfca=all_rfca)
-    print("~~~~Current Model Setting~~~~\n","load_pretrain_weights: ",load_pretrain_weights,"\n","with_FFCA: ",with_FFCA,"\n","spatial_attention: ",spatial_attention,"\n","skip_connection: ",skip_connection,"\n","use_rfca: ",use_rfca,"\n","all_rfca: ",all_rfca,"\n")
+    model = HighResolutionNet(base_channel=32, num_joints=num_joints,
+                               with_FFCA=with_FFCA, spatial_attention=spatial_attention,
+                                 skip_connection=skip_connection,swap_att=swap_att,
+                                 use_rfca=use_rfca,all_rfca=all_rfca,mix_c=mix_c)
+    print("~~~~Current Model Setting~~~~\n","load_pretrain_weights: "
+          ,load_pretrain_weights,"\n","with_FFCA: "
+          ,with_FFCA,"\n","spatial_attention: "
+          ,spatial_attention,"\n","skip_connection: "
+          ,skip_connection,"\n","use_rfca: "
+          ,use_rfca,"\n","all_rfca: "
+          ,all_rfca,"\n","mix_c: "
+          ,mix_c,"\n")
     if load_pretrain_weights:
         # 载入预训练模型权重
         # 链接:https://pan.baidu.com/s/1Lu6mMAWfm_8GGykttFMpVw 提取码:f43o
@@ -134,32 +146,31 @@ def cross_validate(args = None):
             train_dataset = data.Subset(dataset, train_index)
             val_dataset = data.Subset(dataset, val_index)
             num += 1
-            if num == 1:
-                try:
-                    # Train the model using the train dataset
-                    result = train(
-                        sweep_id=sweep_id,
-                        num=num,
-                        sweep_run_name=sweep_run_name,
-                        config=config,  # Specify training parameters
-                        train_dataset=train_dataset,
-                        val_dataset=val_dataset,
-                        args=args,
-                        train_index = train_index,
-                        val_index = val_index,
-                        metrics = metrics,
-                        save_path = save_path,
-                    )
-                    metrics.append(result[0])
-                    save_path.append(result[1])
-                    torch.cuda.empty_cache()
-                    print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
-                    
-                    
-                #terminate current fold if training failed
-                except logutils.TrainingException:
-                    print("Training failed for fold {}. Starting next fold.".format(num))
-                    failed_fold.append(num)
+            try:
+                # Train the model using the train dataset
+                result = train(
+                    sweep_id=sweep_id,
+                    num=num,
+                    sweep_run_name=sweep_run_name,
+                    config=config,  # Specify training parameters
+                    train_dataset=train_dataset,
+                    val_dataset=val_dataset,
+                    args=args,
+                    train_index = train_index,
+                    val_index = val_index,
+                    metrics = metrics,
+                    save_path = save_path,
+                )
+                metrics.append(result[0])
+                save_path.append(result[1])
+                torch.cuda.empty_cache()
+                print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
+                
+                
+            #terminate current fold if training failed
+            except logutils.TrainingException:
+                print("Training failed for fold {}. Starting next fold.".format(num))
+                failed_fold.append(num)
                 
         if len(metrics) == 0:
             val_accuracy = -1
@@ -256,7 +267,7 @@ def train(num,
 
         config['lr-gamma'] = 0.27
         config['device'] = 'cuda:0'
-        config['epochs'] = 100 
+        config['epochs'] = 160
         config['num_joints'] = 4
         config['data-path'] = 'datasets'
         config['keypoints_path'] = './spinopelvic_keypoints.json'
@@ -268,6 +279,7 @@ def train(num,
         config['with_FFCA'] = True
         config['with_RFCA'] = True
         config['all_RFCA'] = False
+        config['mix_c'] = True
         config['skip_connection'] = True
         config['SPA_att'] = False
         config['start-epoch'] = 0
@@ -364,7 +376,13 @@ def train(num,
 
     # create model
     #model = create_model(num_joints=run_config['num_joints'], with_FFCA=run_config['with_FFCA'])
-    model = create_model(num_joints=run_config['num_joints'],with_FFCA=run_config['with_FFCA'],spatial_attention=run_config['SPA_att'],skip_connection=run_config['skip_connection'],use_rfca = run_config['with_RFCA'],all_rfca = run_config['all_RFCA'])
+    model = create_model(num_joints=run_config['num_joints'],
+                         with_FFCA=run_config['with_FFCA'],
+                         spatial_attention=run_config['SPA_att'],
+                         skip_connection=run_config['skip_connection'],
+                         use_rfca = run_config['with_RFCA'],
+                         all_rfca = run_config['all_RFCA'],
+                         mix_c=run_config['mix_c'])
     # print(model)
 
     model.to(device)
@@ -514,7 +532,7 @@ def train(num,
 
     #save best model and last model
     if run_config['savebest']:
-        if num == 1:
+        if len(metrics) == 0:
             #save model for the first run
             torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
         elif num != 1 & (len(metrics) != 0):
@@ -544,6 +562,7 @@ def train(num,
         "use_FFCA": run_config['with_FFCA'],
         "use_RFCA": run_config['with_RFCA'],
         "all_RFCA": run_config['all_RFCA'],
+        "mix_c": run_config['mix_c'],
         "skip_connection": run_config['skip_connection'],
         "SPA_ATT": run_config['SPA_att'],
         # 添加其他训练参数...

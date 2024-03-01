@@ -9,6 +9,11 @@ from torchvision.transforms import functional as F
 import matplotlib.pyplot as plt
 from PIL import Image
 
+seed = 2407
+torch.manual_seed(seed)
+np.random.seed(seed)
+random.seed(seed)
+
 def flip_images(img):
     assert len(img.shape) == 4, 'images has to be [batch_size, channels, height, width]'
     img = torch.flip(img, dims=[3])
@@ -275,8 +280,12 @@ class AffineTransform(object):
         self.scale = scale
         self.rotation = rotation
         self.fixed_size = fixed_size
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
 
     def __call__(self, img, target):
+        
         src_xmin, src_ymin, src_xmax, src_ymax = adjust_box(*target["box"], fixed_size=self.fixed_size)
         src_w = src_xmax - src_xmin
         src_h = src_ymax - src_ymin
@@ -289,6 +298,7 @@ class AffineTransform(object):
         dst_p3 = np.array([self.fixed_size[1] - 1, (self.fixed_size[0] - 1) / 2])  # right middle
 
         if self.scale is not None:
+            
             scale = random.uniform(*self.scale)
             src_w = src_w * scale
             src_h = src_h * scale
@@ -336,7 +346,9 @@ class RandomHorizontalFlip(object):
     def __init__(self, p: float = 0.5):
         
         self.p = p
-        
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
 
     def __call__(self, image, target):
         if random.random() < self.p:
@@ -360,7 +372,9 @@ class RandomContrast(object):
         self.p = p
         self.lower = lower
         self.upper = upper
-
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
     def __call__(self, image, target):
         image = Image.fromarray(image)
         if random.random() < self.p:
@@ -380,7 +394,9 @@ class KeypointToHeatMap(object):
         self.use_kps_weights = False if keypoints_weights is None else True
         #self.use_kps_weights = Falsle #dont need kpt weights for this task
         self.kps_weights = keypoints_weights
-
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
         # generate gaussian kernel(not normalized)
         kernel_size = 2 * self.kernel_radius + 1
         kernel = np.zeros((kernel_size, kernel_size), dtype=np.float32)
