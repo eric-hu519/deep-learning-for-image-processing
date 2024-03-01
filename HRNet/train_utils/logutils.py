@@ -49,7 +49,7 @@ def sweep_override(config):
     #limit_batch to avoid cuda overdrive
     run_config = config
     if config['fixed-size'] < 512:
-        run_config['batch_size'] = 64
+        run_config['batch_size'] = 32
     elif config['fixed-size'] == 512 :
         run_config['batch_size'] = 32
         

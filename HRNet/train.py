@@ -16,10 +16,10 @@ from train_utils import logutils
 
 import random
 
-def create_model(num_joints, load_pretrain_weights=False, with_FFCA=True, spatial_attention=True, skip_connection=True,swap_att=True):
+def create_model(num_joints, load_pretrain_weights=False, with_FFCA=True, spatial_attention=False, skip_connection=True,swap_att=False,use_rfca=True,all_rfca=False):
     #base_channel=32 means HRnet-w32
-    model = HighResolutionNet(base_channel=18, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=spatial_attention, skip_connection=skip_connection,swap_att=swap_att)
-    
+    model = HighResolutionNet(base_channel=32, num_joints=num_joints, with_FFCA=with_FFCA, spatial_attention=spatial_attention, skip_connection=skip_connection,swap_att=swap_att,use_rfca=use_rfca,all_rfca=all_rfca)
+    print("~~~~Current Model Setting~~~~\n","load_pretrain_weights: ",load_pretrain_weights,"\n","with_FFCA: ",with_FFCA,"\n","spatial_attention: ",spatial_attention,"\n","skip_connection: ",skip_connection,"\n","use_rfca: ",use_rfca,"\n","all_rfca: ",all_rfca,"\n")
     if load_pretrain_weights:
         # 载入预训练模型权重
         # 链接:https://pan.baidu.com/s/1Lu6mMAWfm_8GGykttFMpVw 提取码:f43o
@@ -134,31 +134,32 @@ def cross_validate(args = None):
             train_dataset = data.Subset(dataset, train_index)
             val_dataset = data.Subset(dataset, val_index)
             num += 1
-            try:
-                # Train the model using the train dataset
-                result = train(
-                    sweep_id=sweep_id,
-                    num=num,
-                    sweep_run_name=sweep_run_name,
-                    config=config,  # Specify training parameters
-                    train_dataset=train_dataset,
-                    val_dataset=val_dataset,
-                    args=args,
-                    train_index = train_index,
-                    val_index = val_index,
-                    metrics = metrics,
-                    save_path = save_path,
-                )
-                metrics.append(result[0])
-                save_path.append(result[1])
-                torch.cuda.empty_cache()
-                print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
-                
-                
-            #terminate current fold if training failed
-            except logutils.TrainingException:
-                print("Training failed for fold {}. Starting next fold.".format(num))
-                failed_fold.append(num)
+            if num == 1:
+                try:
+                    # Train the model using the train dataset
+                    result = train(
+                        sweep_id=sweep_id,
+                        num=num,
+                        sweep_run_name=sweep_run_name,
+                        config=config,  # Specify training parameters
+                        train_dataset=train_dataset,
+                        val_dataset=val_dataset,
+                        args=args,
+                        train_index = train_index,
+                        val_index = val_index,
+                        metrics = metrics,
+                        save_path = save_path,
+                    )
+                    metrics.append(result[0])
+                    save_path.append(result[1])
+                    torch.cuda.empty_cache()
+                    print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
+                    
+                    
+                #terminate current fold if training failed
+                except logutils.TrainingException:
+                    print("Training failed for fold {}. Starting next fold.".format(num))
+                    failed_fold.append(num)
                 
         if len(metrics) == 0:
             val_accuracy = -1
@@ -248,28 +249,32 @@ def train(num,
         sweep_id = 'unknown_test'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
-        config['lr'] = 0.00372
+        config['lr'] = 0.003
         config['wd'] = 1e-4
         config['lr-steps'] = 2
         config['fixed-size'] = 256
 
         config['lr-gamma'] = 0.27
         config['device'] = 'cuda:0'
-        config['epochs'] = 180 
+        config['epochs'] = 100 
         config['num_joints'] = 4
         config['data-path'] = 'datasets'
         config['keypoints_path'] = './spinopelvic_keypoints.json'
         config['output-dir'] = './save_weights/exp'
         config['test-dir'] = './save_weights/test'
-        config['amp'] = False
+        config['amp'] = True
         config['savebest'] = True
         config['resume'] = ''
         config['with_FFCA'] = True
+        config['with_RFCA'] = True
+        config['all_RFCA'] = False
+        config['skip_connection'] = True
+        config['SPA_att'] = False
         config['start-epoch'] = 0
-        config['s1_weight'] = 1
-        config['sc_weight'] = 1
-        config['fh1_weight'] = 1
-        config['fh2_weight'] = 1
+        config['s1_weight'] = 5
+        config['sc_weight'] = 5
+        config['fh1_weight'] = 6
+        config['fh2_weight'] = 6
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
@@ -359,7 +364,7 @@ def train(num,
 
     # create model
     #model = create_model(num_joints=run_config['num_joints'], with_FFCA=run_config['with_FFCA'])
-    model = create_model(num_joints=run_config['num_joints'])
+    model = create_model(num_joints=run_config['num_joints'],with_FFCA=run_config['with_FFCA'],spatial_attention=run_config['SPA_att'],skip_connection=run_config['skip_connection'],use_rfca = run_config['with_RFCA'],all_rfca = run_config['all_RFCA'])
     # print(model)
 
     model.to(device)
@@ -501,8 +506,6 @@ def train(num,
             best_model = save_files
             best_epoches = epoch
             # torch.save(save_files, "./save_weights/model-{}.pth".format(epoch))
-        if epoch == (run_config['epochs'] - 1):
-            last_model = save_files
 
     #val acc equals the mean error of all points of the last epoch
     val_accuracy = (s1_abs_error[-1]+sc_abs_error[-1]+fh1_abs_error[-1]+fh2_abs_error[-1])/4
@@ -513,20 +516,12 @@ def train(num,
     if run_config['savebest']:
         if num == 1:
             #save model for the first run
-            if best_epoches == (run_config['epochs'] - 1):
-                torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
-            else:
-                torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['last-dir'] ,best_epoches,num))
-                torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['last-dir'],epoch,num))
+            torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
         elif num != 1 & (len(metrics) != 0):
             if val_accuracy <= min(metrics):
                 print("new best model for fold {} saved \n".format(num))
                 #save model of current fold
-                if best_epoches == (run_config['epochs'] - 1):
-                    torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
-                else:
-                    torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['last-dir'] ,best_epoches,num))
-                    torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['last-dir'],epoch,num))
+                torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
                 #remove the last model
                 assert len(save_path) != 0, "save_path is empty"
                 pthfile = glob.glob(os.path.join(save_path[-1],'*.pth'))
@@ -535,11 +530,7 @@ def train(num,
                 print("new best model saved \n","removing the last best model}!")
     #if not save best then save the model for every fold
     else:
-        if best_epoches == (run_config['epochs'] - 1):
             torch.save(best_model, "{}/best_model_fold{}.pth".format(run_config['last-dir'],num))
-        else:
-            torch.save(best_model, "{}/best_model-{}-fold{}.pth".format(run_config['last-dir'] ,best_epoches,num))
-            torch.save(last_model, "{}/last_model-{}-fold{}.pth".format(run_config['last-dir'],epoch,num))
     #save train params
     train_params = {
         "fixed-size": run_config['fixed-size'],
@@ -549,7 +540,12 @@ def train(num,
         "weight-decay": run_config['wd'],
         "lr_steps": run_config['lr-steps'],
         "lr_gamma": run_config['lr-gamma'],
-        "keypoints weight": person_kps_info["kps_weights"]
+        "keypoints weight": person_kps_info["kps_weights"],
+        "use_FFCA": run_config['with_FFCA'],
+        "use_RFCA": run_config['with_RFCA'],
+        "all_RFCA": run_config['all_RFCA'],
+        "skip_connection": run_config['skip_connection'],
+        "SPA_ATT": run_config['SPA_att'],
         # 添加其他训练参数...
     }
     with open("{}/train_config_fold{}.txt".format(run_config['last-dir'],num), "w") as f:
@@ -702,7 +698,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', default=False, help='resume mode')
     parser.add_argument('--sweep_id', default='f5cyaw6i', help='sweep id')
     parser.add_argument('--project',default='Spine-final',help='project name')
-    parser.add_argument('--use_kfold', default = False, help='use kfold cross validation')
+    parser.add_argument('--use_kfold', default=True, help='use kfold cross validation')
     args = parser.parse_args()
     main(args)
 

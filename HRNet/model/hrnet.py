@@ -1,5 +1,7 @@
 import torch.nn as nn
 import torch
+
+from einops import rearrange
 BN_MOMENTUM = 0.1
 
 # 用于构建stage的block
@@ -8,7 +10,8 @@ class BasicBlock(nn.Module):
 
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        #self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv1 = RFCAConv(inplanes, planes,3,stride)
         self.bn1 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
@@ -93,8 +96,7 @@ class StageModule(nn.Module):
             w = c * (2 ** i)  # 对应第i个分支的通道数
             branch = nn.Sequential(
                 BasicBlock(w, w),
-                BasicBlock(w, w),
-                BasicBlock(w, w),
+
                 BasicBlock(w, w)
             )
             self.branches.append(branch)
@@ -164,20 +166,23 @@ class StageModule(nn.Module):
 
 #num_joints,表示关节点个数
 class HighResolutionNet(nn.Module):
-    def __init__(self, base_channel: int = 32, num_joints: int = 4, with_FFCA = True, spatial_attention = True, skip_connection = True, swap_att = False):
+    def __init__(self, base_channel: int = 32, num_joints: int = 4, with_FFCA = True, spatial_attention = True, skip_connection = True, swap_att = False, use_rfca = True, all_rfca = True):
         super().__init__()
         # Stem
         self.with_FFCA = with_FFCA
         self.skip_connection = skip_connection
         self.with_spacial = spatial_attention
         self.swap_att = swap_att
-
+        #self.con11 = nn.Conv2d(base_channel, base_channel, kernel_size=1, stride=1, bias=False)
+        ##self.con13 = nn.Conv2d(base_channel*4, base_channel*4, kernel_size=1, stride=1, bias=False)
+        #self.con14 = nn.Conv2d(base_channel*8, base_channel*8, kernel_size=1, stride=1, bias=False)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
         self.relu = nn.ReLU(inplace=True)
         self.sigmoid = nn.Sigmoid()
+        self.gelu = nn.GELU()
 
         # Stage1
         downsample = nn.Sequential(
@@ -194,38 +199,73 @@ class HighResolutionNet(nn.Module):
         #第一个分支上的conv不会改变特征图高宽
         #第二个分支上的conv会将特征图高宽减半
         #每新增一个分支，通道个数都会是上一个分支的两倍
-        self.transition1 = nn.ModuleList([
-            nn.Sequential(
-                nn.Conv2d(256, base_channel, kernel_size=3, stride=1, padding=1, bias=False),
-                nn.BatchNorm2d(base_channel, momentum=BN_MOMENTUM),
-                nn.ReLU(inplace=True)
-            ),
-            nn.Sequential(
-                nn.Sequential(  # 这里又使用一次Sequential是为了适配原项目中提供的权重
-                    nn.Conv2d(256, base_channel * 2, kernel_size=3, stride=2, padding=1, bias=False),
-                    nn.BatchNorm2d(base_channel * 2, momentum=BN_MOMENTUM),
+        if use_rfca & all_rfca:
+            self.transition1 = nn.ModuleList([
+                nn.Sequential(
+                    RFCAConv(256, base_channel,3,1),
+                    #nn.Conv2d(256, base_channel, kernel_size=3, stride=1, padding=1, bias=False),
+                    nn.BatchNorm2d(base_channel, momentum=BN_MOMENTUM),
                     nn.ReLU(inplace=True)
+                ),
+                nn.Sequential(
+                    nn.Sequential(  # 这里又使用一次Sequential是为了适配原项目中提供的权重
+                        RFCAConv(256, base_channel * 2,3,2),
+                        #nn.Conv2d(256, base_channel * 2, kernel_size=3, stride=2, padding=1, bias=False),
+                        nn.BatchNorm2d(base_channel * 2, momentum=BN_MOMENTUM),
+                        nn.ReLU(inplace=True)
+                    )
                 )
-            )
-        ])
+            ])
+        else:
+            self.transition1 = nn.ModuleList([
+                nn.Sequential(
+                    #RFCAConv(256, base_channel,3,1),
+                    nn.Conv2d(256, base_channel, kernel_size=3, stride=1, padding=1, bias=False),
+                    nn.BatchNorm2d(base_channel, momentum=BN_MOMENTUM),
+                    nn.ReLU(inplace=True)
+                ),
+                nn.Sequential(
+                    nn.Sequential(  # 这里又使用一次Sequential是为了适配原项目中提供的权重
+                        #RFCAConv(256, base_channel * 2,3,2),
+                        nn.Conv2d(256, base_channel * 2, kernel_size=3, stride=2, padding=1, bias=False),
+                        nn.BatchNorm2d(base_channel * 2, momentum=BN_MOMENTUM),
+                        nn.ReLU(inplace=True)
+                    )
+                )
+            ])
 
         # Stage2
         self.stage2 = nn.Sequential(
             StageModule(input_branches=2, output_branches=2, c=base_channel)
         )
-
+        if use_rfca & all_rfca:
         # transition2
-        self.transition2 = nn.ModuleList([
-            nn.Identity(),  # None,  - Used in place of "None" because it is callable
-            nn.Identity(),  # None,  - Used in place of "None" because it is callable
-            nn.Sequential(
+            self.transition2 = nn.ModuleList([
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
                 nn.Sequential(
-                    nn.Conv2d(base_channel * 2, base_channel * 4, kernel_size=3, stride=2, padding=1, bias=False),
-                    nn.BatchNorm2d(base_channel * 4, momentum=BN_MOMENTUM),
-                    nn.ReLU(inplace=True)
+                    nn.Sequential(
+                        RFCAConv(base_channel * 2, base_channel * 4,3,2),
+                        #nn.Conv2d(base_channel * 2, base_channel * 4, kernel_size=3, stride=2, padding=1, bias=False),
+                        nn.BatchNorm2d(base_channel * 4, momentum=BN_MOMENTUM),
+                        nn.ReLU(inplace=True)
+                    )
                 )
-            )
-        ])
+            ])
+        else:
+        # transition2
+            self.transition2 = nn.ModuleList([
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
+                nn.Sequential(
+                    nn.Sequential(
+                        #RFCAConv(base_channel * 2, base_channel * 4,3,2),
+                        nn.Conv2d(base_channel * 2, base_channel * 4, kernel_size=3, stride=2, padding=1, bias=False),
+                        nn.BatchNorm2d(base_channel * 4, momentum=BN_MOMENTUM),
+                        nn.ReLU(inplace=True)
+                    )
+                )
+            ])
 
         # Stage3
         self.stage3 = nn.Sequential(
@@ -234,20 +274,35 @@ class HighResolutionNet(nn.Module):
             StageModule(input_branches=3, output_branches=3, c=base_channel),
             StageModule(input_branches=3, output_branches=3, c=base_channel)
         )
-
+        if use_rfca & all_rfca:
         # transition3
-        self.transition3 = nn.ModuleList([
-            nn.Identity(),  # None,  - Used in place of "None" because it is callable
-            nn.Identity(),  # None,  - Used in place of "None" because it is callable
-            nn.Identity(),  # None,  - Used in place of "None" because it is callable
-            nn.Sequential(
+            self.transition3 = nn.ModuleList([
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
                 nn.Sequential(
-                    nn.Conv2d(base_channel * 4, base_channel * 8, kernel_size=3, stride=2, padding=1, bias=False),
-                    nn.BatchNorm2d(base_channel * 8, momentum=BN_MOMENTUM),
-                    nn.ReLU(inplace=True)
+                    nn.Sequential(
+                        RFCAConv(base_channel * 4, base_channel * 8,3,2),
+                        #nn.Conv2d(base_channel * 4, base_channel * 8, kernel_size=3, stride=2, padding=1, bias=False),
+                        nn.BatchNorm2d(base_channel * 8, momentum=BN_MOMENTUM),
+                        nn.ReLU(inplace=True)
+                    )
                 )
-            )
-        ])
+            ])
+        else:
+           self.transition3 = nn.ModuleList([
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
+                nn.Identity(),  # None,  - Used in place of "None" because it is callable
+                nn.Sequential(
+                    nn.Sequential(
+                        #RFCAConv(base_channel * 4, base_channel * 8,3,2),
+                        nn.Conv2d(base_channel * 4, base_channel * 8, kernel_size=3, stride=2, padding=1, bias=False),
+                        nn.BatchNorm2d(base_channel * 8, momentum=BN_MOMENTUM),
+                        nn.ReLU(inplace=True)
+                    )
+                )
+            ]) 
 
         # Stage4
         # 注意，最后一个StageModule只输出分辨率最高的特征层
@@ -261,6 +316,7 @@ class HighResolutionNet(nn.Module):
 
         if self.with_spacial & (not self.swap_att):
             self.spatial_attention = SPAtt()
+            
         elif self.with_spacial & self.swap_att:
             self.cha_att1 = Channel_ATT(base_channel, self.swap_att)
             self.cha_att2 = Channel_ATT(base_channel*2, self.swap_att)
@@ -269,7 +325,7 @@ class HighResolutionNet(nn.Module):
         if not with_FFCA:
             self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel))
         else:
-            self.decoder = myDecoder(base_channel,self.swap_att)
+            self.decoder = myDecoder(base_channel,self.swap_att, use_rfca)
         
         # Final layer，通道个数要与num_joints一致
         self.final_layer = nn.Conv2d(base_channel, num_joints, kernel_size=1, stride=1)
@@ -310,7 +366,7 @@ class HighResolutionNet(nn.Module):
         x = self.stage4(x)
         #print("x[0]: ", x[0].shape, "\n", "x[1]: ", x[1].shape, "\n", "x[2]: ", x[2].shape, "\n", "x[3]: ", x[3].shape, "\n")
         if self.skip_connection & self.with_spacial & (not self.swap_att): 
-        #conbine skip connection
+        
             skip_1 = skip_1 + x[0]
             skip_2 = skip_2 + x[1]
             skip_3 = skip_3 + x[2]
@@ -320,10 +376,15 @@ class HighResolutionNet(nn.Module):
             x[2] = x[2] * self.spatial_attention(skip_3)
             x[3] = x[3] * self.spatial_attention(skip_4)
         elif self.skip_connection &  (not self.with_spacial):
-            x[0] = x[0] + skip_1
-            x[1] = x[1] + skip_2
-            x[2] = x[2] + skip_3
-            x[3] = x[3] + skip_4
+            #x[0] = self.gelu(self.con11(x[0]d + skip_1))
+            #x[1] = self.gelu(self.con12(x[1] + skip_2))
+            #x[2] = self.gelu(self.con13(x[2] + skip_3))
+            #x[3] = self.gelu(self.con14(x[3] + skip_4))
+            skip_1 = skip_1 + x[0]
+            skip_2 = skip_2 + x[1]
+            skip_3 = skip_3 + x[2]
+            skip_4 = skip_4 + x[3]
+
         elif self.swap_att:
 
             skip_1 = skip_1 + x[0]
@@ -350,18 +411,21 @@ class myFFCA(nn.Module):
     """
     FFCA - Fusion Feature Channel Attention Module
     """
-    def __init__(self, low_channel,high_channel,swap_att = False):#输入为低级分支的通道个数
+    def __init__(self, low_channel,high_channel,swap_att = False, use_rfca = True):#输入为低级分支的通道个数
         super().__init__()
         #low_branch size should be (batch_size, 2*high_channel, height/2, width/2)
 
         self.swap_att = swap_att
+        self.use_rfca = use_rfca
         self.low_channle = low_channel
         self.high_channle = high_channel
         self.sigmoid = nn.Sigmoid()
         #process input branch
         self.inbranch_process = nn.Sequential(
+            #nn.ConvTranspose2d(self.low_channle,self.low_channle,kernel_size=4,stride=2,padding=1,bias=False),
             #upsample, make lowchannel's H,W double and equals to highchannel's H,W
             nn.Upsample(scale_factor=2.0, mode='nearest'),
+            
             #3*3conv, make lowchannel's channel equals to highchannel's channel
             nn.Conv2d(self.low_channle, self.high_channle,3,padding=1)
         )
@@ -375,21 +439,24 @@ class myFFCA(nn.Module):
             nn.Conv2d(self.low_channle, self.high_channle,3,padding=1),
             self.sigmoid
         )
+        self.rfcaout = RFCAConv(self.high_channle*2, self.high_channle,3,1)
+        #self.whfusion = whfusion(self.high_channle, self.high_channle,3,1)
+        #self.mixedwh = whfusion(self.high_channle*2, self.high_channle,3,1)
+        #self.conv1 = nn.Conv2d(2*self.high_channle, 2*self.high_channle,kernel_size=1,bias=False)
     def forward(self, low_branch, high_branch):
         up_lowbranch = self.inbranch_process(low_branch)
         #concatenate two branch
         concat_branch = torch.cat((up_lowbranch, high_branch), 1)#channle*2
         if self.swap_att:
             feature_weight = self.Spa_ATT(concat_branch)
+        elif self.use_rfca:
+            output_branch = self.rfcaout(concat_branch)
         else:
             feature_weight = self.Channel_ATT(concat_branch)
 
-        weighted_branch = feature_weight * up_lowbranch
+            weighted_branch = feature_weight * up_lowbranch
 
-        output_branch = torch.cat((weighted_branch, high_branch), 1)#channle*2
-
-        output_branch = self.output(output_branch)#half the channle
-
+            output_branch = torch.cat((weighted_branch, high_branch), 1)#channle*2
         return output_branch #output size should be (batch_size, high_channel, height, width)
 
 
@@ -397,12 +464,12 @@ class myDecoder(nn.Module):
     """
     Decoder with FFCA modules.
     """
-    def __init__(self,basechannel,swap_att = False):
+    def __init__(self,basechannel,swap_att = False, use_rfca = True):
         super().__init__()
         #from higher ffca to lower ffca
-        self.ffca3 = myFFCA(2*basechannel,basechannel, swap_att)
-        self.ffca2 = myFFCA(4*basechannel,2*basechannel, swap_att)
-        self.ffca1 = myFFCA(8*basechannel,4*basechannel, swap_att)
+        self.ffca3 = myFFCA(2*basechannel,basechannel, swap_att, use_rfca)
+        self.ffca2 = myFFCA(4*basechannel,2*basechannel, swap_att, use_rfca)
+        self.ffca1 = myFFCA(8*basechannel,4*basechannel, swap_att, use_rfca)
         
     def forward(self, x):
         branch3, branch2, branch1, branch0 = x
@@ -448,8 +515,8 @@ class Channel_ATT(nn.Module):
             self.fc = nn.Linear(self.low_channle, self.low_channle//2, bias=False)
         else:
             self.fc = nn.Linear(self.low_channle, self.low_channle, bias=False)
-        self.sigmoid = nn.Sigmoid()
-        self.relu = nn.ReLU(inplace=True)
+
+        self.softmax = nn.Softmax()
         
     def forward(self, x):
         maxpooled_branch = self.max_pool(x)
@@ -459,7 +526,7 @@ class Channel_ATT(nn.Module):
         maxpooled_branch_flat = maxpooled_branch.view(maxpooled_branch.size(0), -1)
         avgpooled_branch_flat = avgpooled_branch.view(avgpooled_branch.size(0), -1)
         # Pass the tensors through the fully connected layer
-        feature_weight = self.relu(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
+        feature_weight = self.softmax(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
 
         
         #restore the size of weight from[batch_size, channel] to [batch_size, channel, 1, 1]
@@ -467,3 +534,88 @@ class Channel_ATT(nn.Module):
         
 
         return feature_weight
+
+class h_sigmoid(nn.Module):
+    def __init__(self, inplace=True):
+        super(h_sigmoid, self).__init__()
+        self.relu = nn.ReLU6(inplace=inplace)
+
+    def forward(self, x):
+        return self.relu(x + 3) / 6
+
+class h_swish(nn.Module):
+    def __init__(self, inplace=True):
+        super(h_swish, self).__init__()
+        self.sigmoid = h_sigmoid(inplace=inplace)
+
+    def forward(self, x):
+        return x * self.sigmoid(x)
+
+class RFCAConv(nn.Module):
+    def __init__(self, inp, oup,kernel_size,stride, reduction=32, mix_c = True):
+        super(RFCAConv, self).__init__()
+        self.kernel_size = kernel_size
+        self.mix_c = mix_c
+        self.generate = nn.Sequential(nn.Conv2d(inp,inp * (kernel_size**2),kernel_size,padding=kernel_size//2,
+                                                stride=stride,groups=inp,
+                                                bias =False),
+                                      nn.BatchNorm2d(inp * (kernel_size**2)),
+                                      nn.ReLU()
+                                      )
+        self.pool_h = nn.AdaptiveAvgPool2d((None, 1))
+        self.pool_w = nn.AdaptiveAvgPool2d((1, None))
+
+        self.pool_h_max = nn.AdaptiveMaxPool2d((None, 1))
+        self.pool_w_max = nn.AdaptiveMaxPool2d((1, None))
+        mip = max(8, inp // reduction)
+
+        self.conv1 = nn.Conv2d(inp, mip, kernel_size=1, stride=1, padding=0)
+        self.bn1 = nn.BatchNorm2d(mip)
+        self.act = h_swish()
+        
+        self.conv_h = nn.Conv2d(mip, inp, kernel_size=1, stride=1, padding=0)
+        self.conv_w = nn.Conv2d(mip, inp, kernel_size=1, stride=1, padding=0)
+        self.conv = nn.Sequential(nn.Conv2d(inp,oup,kernel_size,stride=kernel_size))
+        #self.spatt = SPAtt()
+        self.conmaxmin = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
+        #self.mix_h = nn.Conv2d(inp, inp, kernel_size=(7, 1), stride=(2, 1), padding=(3, 0))
+        #self.mix_w = nn.Conv2d(inp, inp, kernel_size=(1, 7), stride=(1, 2), padding=(0, 3))
+
+    def forward(self, x):
+        b,c = x.shape[0:2]
+        generate_feature = self.generate(x)
+        h,w = generate_feature.shape[2:]
+        generate_feature = generate_feature.view(b,c,self.kernel_size**2,h,w)
+        
+        generate_feature = rearrange(generate_feature, 'b c (n1 n2) h w -> b c (h n1) (w n2)', n1=self.kernel_size,
+                              n2=self.kernel_size)
+        x_h = self.pool_h(generate_feature)
+        #x_h_max = self.pool_h_max(generate_feature)
+        x_w = self.pool_w(generate_feature).permute(0, 1, 3, 2)
+        #x_w_max = self.pool_w_max(generate_feature).permute(0, 1, 3, 2)
+        if self.mix_c:
+            x_c_mean = torch.mean(generate_feature, dim=1, keepdim=True)
+            x_c_max = torch.max(generate_feature, dim=1, keepdim=True)[0]
+            x_c = torch.cat([x_c_mean, x_c_max], dim=1)
+            x_c = self.conmaxmin(x_c)
+            #combine x_h and x_c
+            x_h = x_h * self.pool_h(x_c)
+            x_w = x_w * self.pool_w(x_c).permute(0, 1, 3, 2)
+        y = torch.cat([x_h, x_w], dim=2)
+        y = self.conv1(y)
+        y = self.bn1(y)
+        y = self.act(y) 
+        
+        h,w = generate_feature.shape[2:]
+        x_h, x_w = torch.split(y, [h, w], dim=2)
+        x_w = x_w.permute(0, 1, 3, 2)
+
+        a_h = self.conv_h(x_h).sigmoid()
+
+        a_w = self.conv_w(x_w).sigmoid()
+
+        out = self.conv(generate_feature * a_w * a_h)
+
+        #out = out * self.spatt(out)
+ 
+        return out
