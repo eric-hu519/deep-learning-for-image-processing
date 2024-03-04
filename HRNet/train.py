@@ -129,7 +129,7 @@ def cross_validate(args = None):
         test_index = indices[train_size + val_size:]
 
         #generate datasets
-        train_dataset = data.Subset(dataset, train_index)
+        train_dataset = data.Subsset(dataset, train_index)
         val_dataset = data.Subset(dataset, val_index)
         test_dataset = data.Subset(dataset, test_index)
     
@@ -473,7 +473,7 @@ def train(num,
         coco_info = utils.evaluate(model, val_data_loader, device=device,
                                    flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['last-dir']))
         coco_info.append(mloss.item())
-
+        print("current fold: ",num,"\n") 
         print("val_loss: ", coco_info[-1],"\n")
         #检查runs文件夹是否存在，若不存在则创建
         #if not os.path.exists("./runs"):
