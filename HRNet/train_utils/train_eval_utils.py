@@ -9,6 +9,7 @@ import transforms
 import train_utils.distributed_utils as utils
 from .coco_eval import EvalCOCOMetric
 from .loss import KpLoss
+from .loss import AW_loss
 from .logutils import TrainingException
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
@@ -71,9 +72,12 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
 
 @torch.no_grad()
 def eval_loss(model,  data_loader, device, epoch,
-                    print_freq=50, scaler=None):
+                    print_freq=50, scaler=None, use_aw = False):
     metric_logger = utils.MetricLogger(delimiter="  ")
-    mse = KpLoss()
+    if use_aw:
+        mse = AW_loss()
+    else:
+        mse = KpLoss()
     mloss = torch.zeros(1).to(device)  # mean losses
     header = 'Epoch: [{}]'.format(epoch)
     for i, [images, targets] in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
@@ -82,8 +86,13 @@ def eval_loss(model,  data_loader, device, epoch,
         # 混合精度训练上下文管理器，如果在CPU环境中不起任何作用
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             results = model(images)
-
-            losses = mse(results, targets)
+            if use_aw & (i == 0):
+                losses, diff = mse(results, targets)
+            elif use_aw & (i != 0):
+                losses, diff = mse(results, targets,diff)
+            
+            else:
+                losses = mse(results, targets)
 
         # reduce losses over all GPUs for logging purpose
         loss_dict_reduced = utils.reduce_dict({"losses": losses})

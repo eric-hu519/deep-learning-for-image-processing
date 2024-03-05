@@ -129,7 +129,7 @@ def cross_validate(args = None):
         test_index = indices[train_size + val_size:]
 
         #generate datasets
-        train_dataset = data.Subsset(dataset, train_index)
+        train_dataset = data.Subset(dataset, train_index)
         val_dataset = data.Subset(dataset, val_index)
         test_dataset = data.Subset(dataset, test_index)
     
@@ -283,10 +283,11 @@ def train(num,
         config['skip_connection'] = True
         config['SPA_att'] = False
         config['start-epoch'] = 0
-        config['s1_weight'] = 5
-        config['sc_weight'] = 5
-        config['fh1_weight'] = 6
-        config['fh2_weight'] = 6
+        config['s1_weight'] = 1
+        config['sc_weight'] = 1
+        config['fh1_weight'] = 1
+        config['fh2_weight'] = 1
+        config['use_awloss'] = True
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
@@ -440,12 +441,12 @@ def train(num,
         # update the learning rate
         lr_scheduler.step()
 
-        mloss = utils.eval_loss(model, val_data_loader, device=device, epoch=epoch, scaler=scaler)
+        mloss = utils.eval_loss(model, val_data_loader, device=device, epoch=epoch, scaler=scaler,use_aw=run_config['use_awloss'])
         #for the last epoch only, evaluate on test dataset
         if epoch == (run_config['epochs'] - 1):
             is_last_epoch = True
             if test_dataset is not None:
-                test_loss = utils.eval_loss(model, test_data_loader, device=device, epoch=epoch, scaler=scaler)
+                test_loss = utils.eval_loss(model, test_data_loader, device=device, epoch=epoch, scaler=scaler,use_aw=run_config['use_awloss'])
                 print("test_loss: ", test_loss.item(), "\n")
                 test_info = utils.evaluate(model, test_data_loader, device=device,
                                           flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['test-dir']))
@@ -563,6 +564,7 @@ def train(num,
         "use_RFCA": run_config['with_RFCA'],
         "all_RFCA": run_config['all_RFCA'],
         "mix_c": run_config['mix_c'],
+        "use_awloss": run_config['use_awloss'],
         "skip_connection": run_config['skip_connection'],
         "SPA_ATT": run_config['SPA_att'],
         # 添加其他训练参数...

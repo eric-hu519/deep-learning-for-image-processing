@@ -96,10 +96,18 @@ class StageModule(nn.Module):
         self.branches = nn.ModuleList()
         for i in range(self.input_branches):  # 每个分支上都先通过4个BasicBlock
             w = c * (2 ** i)  # 对应第i个分支的通道数
-            branch = nn.Sequential(
-                BasicBlock(w, w, use_rfca = use_rfca, all_rfca = all_rfca, mix_c = mix_c),
-
-                BasicBlock(w, w, use_rfca = use_rfca, all_rfca = all_rfca, mix_c = mix_c),
+            #only 2 basic block when use rfca
+            if use_rfca:
+                branch  = nn.Sequential(
+                    BasicBlock(w, w, use_rfca = use_rfca, all_rfca = all_rfca, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = use_rfca, all_rfca = all_rfca, mix_c = mix_c)
+                )
+            else:
+                branch = nn.Sequential(
+                    BasicBlock(w, w, use_rfca = use_rfca, all_rfca = all_rfca, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = use_rfca, all_rfca = all_rfca, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = use_rfca, all_rfca = all_rfca, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = use_rfca, all_rfca = all_rfca, mix_c = mix_c),
             )
             self.branches.append(branch)
 
@@ -178,10 +186,10 @@ class HighResolutionNet(nn.Module):
         self.with_spacial = spatial_attention
         self.swap_att = swap_att
         self.mix_c = mix_c
-        self.con11 = nn.Conv2d(base_channel, base_channel, kernel_size=1, stride=1, bias=False)
-        self.con12 = nn.Conv2d(base_channel*2, base_channel*2, kernel_size=1, stride=1, bias=False)
-        self.con13 = nn.Conv2d(base_channel*4, base_channel*4, kernel_size=1, stride=1, bias=False)
-        self.con14 = nn.Conv2d(base_channel*8, base_channel*8, kernel_size=1, stride=1, bias=False)
+        #self.con11 = nn.Conv2d(base_channel, base_channel, kernel_size=1, stride=1, bias=False)
+        #self.con12 = nn.Conv2d(base_channel*2, base_channel*2, kernel_size=1, stride=1, bias=False)
+        #self.con13 = nn.Conv2d(base_channel*4, base_channel*4, kernel_size=1, stride=1, bias=False)
+        #self.con14 = nn.Conv2d(base_channel*8, base_channel*8, kernel_size=1, stride=1, bias=False)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1, bias=False)
@@ -373,7 +381,7 @@ class HighResolutionNet(nn.Module):
         #print("x[0]: ", x[0].shape, "\n", "x[1]: ", x[1].shape, "\n", "x[2]: ", x[2].shape, "\n", "x[3]: ", x[3].shape, "\n")
         if self.skip_connection & self.with_spacial & (not self.swap_att): 
         
-            skip_1 = skip_1 + x[0]
+            #skip_1 = skip_1 + x[0]
             skip_2 = skip_2 + x[1]
             skip_3 = skip_3 + x[2]
             skip_4 = skip_4 + x[3]
@@ -386,14 +394,14 @@ class HighResolutionNet(nn.Module):
             #x[1] = self.gelu(self.con12(x[1] + skip_2))
             #x[2] = self.gelu(self.con13(x[2] + skip_3))
             #x[3] = self.gelu(self.con14(x[3] + skip_4))
-            skip_1 = skip_1 * x[0]
-            skip_2 = skip_2 * x[1]
-            skip_3 = skip_3 * x[2]
-            skip_4 = skip_4 * x[3]
+            #skip_1 = skip_1 + x[0]
+            skip_2 = skip_2 + x[1]
+            skip_3 = skip_3 + x[2]
+            skip_4 = skip_4 + x[3]
 
         elif self.swap_att:
 
-            skip_1 = skip_1 * x[0]
+            #skip_1 = skip_1 * x[0]
             skip_2 = skip_2 * x[1]
             skip_3 = skip_3 * x[2]
             skip_4 = skip_4 * x[3]
