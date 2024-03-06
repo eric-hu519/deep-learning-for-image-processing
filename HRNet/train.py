@@ -287,6 +287,7 @@ def train(num,
         config['fh1_weight'] = 1
         config['fh2_weight'] = 1
         config['use_awloss'] = True
+        config['use_loss_decay'] = True
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
@@ -413,6 +414,8 @@ def train(num,
     train_loss = []
     learning_rate = []
     val_map = []
+    decay_rate =[]
+    amp_rate = []
     sc_abs_error = []
     s1_abs_error = []
     fh1_abs_error = []
@@ -424,28 +427,40 @@ def train(num,
     val_loss = []
     best_err = np.zeros((4,))
     is_last_epoch = False
-    
-
+    loss_gamma = 1e-2
+    decay = 1.0
+    amp = 1.0
 #训练主函数
     for epoch in range(run_config['start-epoch'], run_config['epochs']):
         # train for one epoch, printing every 50 iterations
         #利用均方误差作为损失函数
+        if epoch == 0:
+            decay = 1.0
+            amp = 1.0
+        elif (min(train_loss) == train_loss[-1]) and run_config['use_loss_decay']:
+            decay = decay*(1-loss_gamma)
+            amp = amp*(1+loss_gamma)
+        print("decay: ",decay,"\n","amp: ",amp,"\n")
+
         mean_loss, lr = utils.train_one_epoch(model, optimizer, train_data_loader,
                                               device=device, epoch=epoch,
                                               print_freq=50, warmup=True,
-                                              scaler=scaler, use_aw=run_config['use_awloss'])
+                                              scaler=scaler, use_aw=run_config['use_awloss'],
+                                              decay=decay, amp = amp)
         train_loss.append(mean_loss.item())
         learning_rate.append(lr)
+        amp_rate.append(amp)
+        decay_rate.append(decay)
 
         # update the learning rate
         lr_scheduler.step()
 
-        mloss = utils.eval_loss(model, val_data_loader, device=device, epoch=epoch, scaler=scaler,use_aw=run_config['use_awloss'])
+        mloss = utils.eval_loss(model, val_data_loader, device=device, epoch=epoch, scaler=scaler,use_aw=run_config['use_awloss'],decay=decay,amp=amp)
         #for the last epoch only, evaluate on test dataset
         if epoch == (run_config['epochs'] - 1):
             is_last_epoch = True
             if test_dataset is not None:
-                test_loss = utils.eval_loss(model, test_data_loader, device=device, epoch=epoch, scaler=scaler,use_aw=run_config['use_awloss'])
+                test_loss = utils.eval_loss(model, test_data_loader, device=device, epoch=epoch, scaler=scaler,use_aw=run_config['use_awloss'],decay=decay,amp=amp)
                 print("test_loss: ", test_loss.item(), "\n")
                 test_info = utils.evaluate(model, test_data_loader, device=device,
                                           flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['test-dir']))
@@ -564,6 +579,7 @@ def train(num,
         "all_RFCA": run_config['all_RFCA'],
         "mix_c": run_config['mix_c'],
         "use_awloss": run_config['use_awloss'],
+        "use_loss_decay": run_config['use_loss_decay'],
         "skip_connection": run_config['skip_connection'],
         "SPA_ATT": run_config['SPA_att'],
         # 添加其他训练参数...

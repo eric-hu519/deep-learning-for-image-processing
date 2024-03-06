@@ -13,7 +13,7 @@ from .loss import AW_loss
 from .logutils import TrainingException
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
-                    print_freq=50, warmup=False, scaler=None, use_aw = False):
+                    print_freq=50, warmup=False, scaler=None, use_aw = False, decay = 1, amp = 1):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -36,8 +36,10 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         # 混合精度训练上下文管理器，如果在CPU环境中不起任何作用
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             results = model(images)
-
-            losses = mse(results, targets)
+            if use_aw:
+                losses = mse(results, targets,decay=decay,amp=amp)
+            else:
+                losses = mse(results, targets)
 
         # reduce losses over all GPUs for logging purpose
         loss_dict_reduced = utils.reduce_dict({"losses": losses})
@@ -74,7 +76,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
 
 @torch.no_grad()
 def eval_loss(model,  data_loader, device, epoch,
-                    print_freq=50, scaler=None, use_aw = False):
+                    print_freq=50, scaler=None, use_aw = False,decay = 1, amp = 1):
     metric_logger = utils.MetricLogger(delimiter="  ")
     if use_aw:
         mse = AW_loss()
@@ -88,11 +90,8 @@ def eval_loss(model,  data_loader, device, epoch,
         # 混合精度训练上下文管理器，如果在CPU环境中不起任何作用
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             results = model(images)
-            if use_aw & (i == 0):
-                losses = mse(results, targets)
-            elif use_aw & (i != 0):
-                losses = mse(results, targets)
-            
+            if use_aw:
+                losses = mse(results, targets, decay = decay, amp = amp)
             else:
                 losses = mse(results, targets)
 

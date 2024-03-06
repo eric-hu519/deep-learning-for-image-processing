@@ -7,6 +7,8 @@ from collections import defaultdict
 from . import mask as maskUtils
 import copy
 import torch
+import json
+import os
 
 class COCOeval:
     # Interface for evaluating detection on the Microsoft COCO dataset.
@@ -153,7 +155,7 @@ class COCOeval:
             computeIoU = self.computeOks #用computeOks来计算IoU
         for imgId in p.imgIds:
             for catId in catIds:
-                iou, err = computeIoU(imgId, catId)
+                iou, err = computeIoU(imgId, catId, is_last_epoch, save_dir)
                 self.ious[(imgId, catId)] = iou
                 self.error.append(err)#获得每100张各图片的error
         evaluateImg = self.evaluateImg
@@ -208,12 +210,24 @@ class COCOeval:
         ious = maskUtils.iou(d,g,iscrowd)
         return ious
 
-    def computeOks(self, imgId, catId):
+    def computeOks(self, imgId, catId, is_last_epoch = False, save_dir = None):
         p = self.params
         # dimention here should be Nxm
         gts = self._gts[imgId, catId]
         dts = self._dts[imgId, catId]
         inds = np.argsort([-d['score'] for d in dts], kind='mergesort')
+        #save dts to output dir when last epoch as json file
+        if is_last_epoch and save_dir is not None:
+            if not os.path.exists(save_dir+'/dts.json'):
+                data_list = [dts]
+            else:
+                with open(save_dir+'/dts.json', 'r') as f:
+                    data_list = json.load(f)
+                data_list.append(dts)
+            with open(save_dir+'/dts.json', 'w') as f:
+                json.dump(data_list, f)
+
+
         dts = [dts[i] for i in inds]
         if len(dts) > p.maxDets[-1]:
             dts = dts[0:p.maxDets[-1]]

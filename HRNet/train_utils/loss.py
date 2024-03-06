@@ -70,7 +70,7 @@ class AW_loss(object):
     def nonlinear_part(self,logits,targets):
         return self.omega*torch.log(1+(abs((logits-targets)/self.epsilon))**(self.alpha-targets))
 
-    def __call__(self, logits, targets,decay = 1,amp = 1):
+    def __call__(self, logits, targets,decay = 1.0,amp = 1.0):
         assert len(logits.shape) == 4, 'logits should be 4-ndim'
         #print("aw loss enabled")
         device = logits.device
@@ -86,7 +86,7 @@ class AW_loss(object):
         #logits为网络预测的Heatmap，heatmap为网格法计算的Heatmap
         diff_map = abs(logits-heatmaps)
         loss = 0
-        loss = torch.where(diff_map >= (self.theta*decay), self.linear_part(logits,heatmaps*amp), self.nonlinear_part(logits,heatmaps*amp))
+        loss = torch.where(diff_map >= (self.theta**amp), self.linear_part(logits,heatmaps*amp), self.nonlinear_part(logits,torch.pow(heatmaps,amp)))
         loss = torch.sum(loss) / bs
         return loss
    
