@@ -13,7 +13,7 @@ from .loss import AW_loss
 from .logutils import TrainingException
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch,
-                    print_freq=50, warmup=False, scaler=None):
+                    print_freq=50, warmup=False, scaler=None, use_aw = False):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -25,8 +25,10 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         warmup_iters = min(1000, len(data_loader) - 1)
 
         lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
-
-    mse = KpLoss()
+    if use_aw:
+        mse = AW_loss()
+    else:
+        mse = KpLoss()
     mloss = torch.zeros(1).to(device)  # mean losses
     for i, [images, targets] in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         images = torch.stack([image.to(device) for image in images])
@@ -87,9 +89,9 @@ def eval_loss(model,  data_loader, device, epoch,
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             results = model(images)
             if use_aw & (i == 0):
-                losses, diff = mse(results, targets)
+                losses = mse(results, targets)
             elif use_aw & (i != 0):
-                losses, diff = mse(results, targets,diff)
+                losses = mse(results, targets)
             
             else:
                 losses = mse(results, targets)

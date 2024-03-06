@@ -24,8 +24,7 @@ def create_model(num_joints, load_pretrain_weights=False, with_FFCA=True,
                                with_FFCA=with_FFCA, spatial_attention=spatial_attention,
                                  skip_connection=skip_connection,swap_att=swap_att,
                                  use_rfca=use_rfca,all_rfca=all_rfca,mix_c=mix_c)
-    print("~~~~Current Model Setting~~~~\n","load_pretrain_weights: "
-          ,load_pretrain_weights,"\n","with_FFCA: "
+    print("~~~~Current Model Setting~~~~\n","with_FFCA: "
           ,with_FFCA,"\n","spatial_attention: "
           ,spatial_attention,"\n","skip_connection: "
           ,skip_connection,"\n","use_rfca: "
@@ -277,7 +276,7 @@ def train(num,
         config['savebest'] = True
         config['resume'] = ''
         config['with_FFCA'] = True
-        config['with_RFCA'] = True
+        config['with_RFCA'] = True 
         config['all_RFCA'] = False
         config['mix_c'] = True
         config['skip_connection'] = True
@@ -434,7 +433,7 @@ def train(num,
         mean_loss, lr = utils.train_one_epoch(model, optimizer, train_data_loader,
                                               device=device, epoch=epoch,
                                               print_freq=50, warmup=True,
-                                              scaler=scaler)
+                                              scaler=scaler, use_aw=run_config['use_awloss'])
         train_loss.append(mean_loss.item())
         learning_rate.append(lr)
 

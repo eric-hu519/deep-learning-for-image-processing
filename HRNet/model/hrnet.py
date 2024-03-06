@@ -186,6 +186,9 @@ class HighResolutionNet(nn.Module):
         self.with_spacial = spatial_attention
         self.swap_att = swap_att
         self.mix_c = mix_c
+        self.use_rfca = use_rfca
+        self.mix_c = mix_c
+        self.all_rfca = all_rfca
         #self.con11 = nn.Conv2d(base_channel, base_channel, kernel_size=1, stride=1, bias=False)
         #self.con12 = nn.Conv2d(base_channel*2, base_channel*2, kernel_size=1, stride=1, bias=False)
         #self.con13 = nn.Conv2d(base_channel*4, base_channel*4, kernel_size=1, stride=1, bias=False)
@@ -213,17 +216,17 @@ class HighResolutionNet(nn.Module):
         #第一个分支上的conv不会改变特征图高宽
         #第二个分支上的conv会将特征图高宽减半
         #每新增一个分支，通道个数都会是上一个分支的两倍
-        if use_rfca & all_rfca:
+        if self.use_rfca & self.all_rfca:
             self.transition1 = nn.ModuleList([
                 nn.Sequential(
-                    RFCAConv(256, base_channel,3,1,mix_c=mix_c),
+                    RFCAConv(256, base_channel,3,1,mix_c=self.mix_c),
                     #nn.Conv2d(256, base_channel, kernel_size=3, stride=1, padding=1, bias=False),
                     nn.BatchNorm2d(base_channel, momentum=BN_MOMENTUM),
                     nn.ReLU(inplace=True)
                 ),
                 nn.Sequential(
                     nn.Sequential(  # 这里又使用一次Sequential是为了适配原项目中提供的权重
-                        RFCAConv(256, base_channel * 2,3,2,mix_c=mix_c),
+                        RFCAConv(256, base_channel * 2,3,2,mix_c=self.mix_c),
                         #nn.Conv2d(256, base_channel * 2, kernel_size=3, stride=2, padding=1, bias=False),
                         nn.BatchNorm2d(base_channel * 2, momentum=BN_MOMENTUM),
                         nn.ReLU(inplace=True)
@@ -250,7 +253,7 @@ class HighResolutionNet(nn.Module):
 
         # Stage2
         self.stage2 = nn.Sequential(
-            StageModule(input_branches=2, output_branches=2, c=base_channel,use_rfca = use_rfca, all_rfca = all_rfca, mix_c=mix_c),
+            StageModule(input_branches=2, output_branches=2, c=base_channel,use_rfca = self.use_rfca, all_rfca = self.all_rfca, mix_c=self.mix_c),
         )
         if use_rfca & all_rfca:
         # transition2
@@ -259,7 +262,7 @@ class HighResolutionNet(nn.Module):
                 nn.Identity(),  # None,  - Used in place of "None" because it is callable
                 nn.Sequential(
                     nn.Sequential(
-                        RFCAConv(base_channel * 2, base_channel * 4,3,2,mix_c=mix_c),
+                        RFCAConv(base_channel * 2, base_channel * 4,3,2,mix_c=self.mix_c),
                         #nn.Conv2d(base_channel * 2, base_channel * 4, kernel_size=3, stride=2, padding=1, bias=False),
                         nn.BatchNorm2d(base_channel * 4, momentum=BN_MOMENTUM),
                         nn.ReLU(inplace=True)
@@ -283,12 +286,12 @@ class HighResolutionNet(nn.Module):
 
         # Stage3
         self.stage3 = nn.Sequential(
-            StageModule(input_branches=3, output_branches=3, c=base_channel,use_rfca = use_rfca, all_rfca = all_rfca, mix_c=mix_c),
-            StageModule(input_branches=3, output_branches=3, c=base_channel,use_rfca = use_rfca, all_rfca = all_rfca, mix_c=mix_c),
-            StageModule(input_branches=3, output_branches=3, c=base_channel,use_rfca = use_rfca, all_rfca = all_rfca, mix_c=mix_c),
-            StageModule(input_branches=3, output_branches=3, c=base_channel,use_rfca=use_rfca, all_rfca = all_rfca, mix_c=mix_c)
+            StageModule(input_branches=3, output_branches=3, c=base_channel,use_rfca = self.use_rfca, all_rfca = self.all_rfca, mix_c=self.mix_c),
+            StageModule(input_branches=3, output_branches=3, c=base_channel,use_rfca = self.use_rfca, all_rfca = self.all_rfca, mix_c=self.mix_c),
+            StageModule(input_branches=3, output_branches=3, c=base_channel,use_rfca = self.use_rfca, all_rfca = self.all_rfca, mix_c=self.mix_c),
+            StageModule(input_branches=3, output_branches=3, c=base_channel,use_rfca=self.use_rfca, all_rfca = self.all_rfca, mix_c=self.mix_c)
         )
-        if use_rfca & all_rfca:
+        if self.use_rfca & self.all_rfca:
         # transition3
             self.transition3 = nn.ModuleList([
                 nn.Identity(),  # None,  - Used in place of "None" because it is callable
@@ -296,7 +299,7 @@ class HighResolutionNet(nn.Module):
                 nn.Identity(),  # None,  - Used in place of "None" because it is callable
                 nn.Sequential(
                     nn.Sequential(
-                        RFCAConv(base_channel * 4, base_channel * 8,3,2,mix_c=mix_c),
+                        RFCAConv(base_channel * 4, base_channel * 8,3,2,mix_c=self.mix_c),
                         #nn.Conv2d(base_channel * 4, base_channel * 8, kernel_size=3, stride=2, padding=1, bias=False),
                         nn.BatchNorm2d(base_channel * 8, momentum=BN_MOMENTUM),
                         nn.ReLU(inplace=True)
@@ -321,8 +324,8 @@ class HighResolutionNet(nn.Module):
         # Stage4
         # 注意，最后一个StageModule只输出分辨率最高的特征层
         self.stage4 = nn.Sequential(
-            StageModule(input_branches=4, output_branches=4, c=base_channel,use_rfca=use_rfca, all_rfca = all_rfca, mix_c=mix_c),
-            StageModule(input_branches=4, output_branches=4, c=base_channel,use_rfca=use_rfca, all_rfca = all_rfca, mix_c=mix_c),
+            StageModule(input_branches=4, output_branches=4, c=base_channel,use_rfca=self.use_rfca, all_rfca = self.all_rfca, mix_c=self.mix_c),
+            StageModule(input_branches=4, output_branches=4, c=base_channel,use_rfca=self.use_rfca, all_rfca = self.all_rfca, mix_c=self.mix_c),
             
             #将四个输入分支进行融合，输出一个分支
             #StageModule(input_branches=4, output_branches=1, c=base_channel)
@@ -336,15 +339,16 @@ class HighResolutionNet(nn.Module):
             self.cha_att2 = Channel_ATT(base_channel*2, self.swap_att)
             self.cha_att3 = Channel_ATT(base_channel*4, self.swap_att)
             self.cha_att4 = Channel_ATT(base_channel*8, self.swap_att)
-        if not with_FFCA:
-            self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel,use_rfca=False, all_rfca = False, mix_c=mix_c))
+        if not self.with_FFCA:
+            self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel,use_rfca=False, all_rfca = False, mix_c=self.mix_c))
         else:
-            self.decoder = myDecoder(base_channel,self.swap_att, use_rfca)
+            self.decoder = myDecoder(base_channel,self.swap_att, self.use_rfca,self.mix_c)
         
         # Final layer，通道个数要与num_joints一致
         self.final_layer = nn.Conv2d(base_channel, num_joints, kernel_size=1, stride=1)
 
     def forward(self, x):
+
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -380,7 +384,7 @@ class HighResolutionNet(nn.Module):
         x = self.stage4(x)
         #print("x[0]: ", x[0].shape, "\n", "x[1]: ", x[1].shape, "\n", "x[2]: ", x[2].shape, "\n", "x[3]: ", x[3].shape, "\n")
         if self.skip_connection & self.with_spacial & (not self.swap_att): 
-        
+            #print("skipped")
             #skip_1 = skip_1 + x[0]
             skip_2 = skip_2 + x[1]
             skip_3 = skip_3 + x[2]
@@ -394,13 +398,14 @@ class HighResolutionNet(nn.Module):
             #x[1] = self.gelu(self.con12(x[1] + skip_2))
             #x[2] = self.gelu(self.con13(x[2] + skip_3))
             #x[3] = self.gelu(self.con14(x[3] + skip_4))
-            #skip_1 = skip_1 + x[0]
-            skip_2 = skip_2 + x[1]
-            skip_3 = skip_3 + x[2]
-            skip_4 = skip_4 + x[3]
+            #print("skipped")
+            #x[0] = skip_1 + x[0]
+            x[1] = skip_2 + x[1]
+            x[2] = skip_3 + x[2]
+            x[3] = skip_4 + x[3]
 
         elif self.swap_att:
-
+            #print("skipped")
             #skip_1 = skip_1 * x[0]
             skip_2 = skip_2 * x[1]
             skip_3 = skip_3 * x[2]
@@ -453,6 +458,7 @@ class myFFCA(nn.Module):
             nn.Conv2d(self.low_channle, self.high_channle,3,padding=1),
             self.sigmoid
         )
+        
         self.rfcaout = RFCAConv(self.high_channle*2, self.high_channle,3,1,mix_c=mix_c)
         #self.whfusion = whfusion(self.high_channle, self.high_channle,3,1)
         #self.mixedwh = whfusion(self.high_channle*2, self.high_channle,3,1)
@@ -465,12 +471,14 @@ class myFFCA(nn.Module):
             feature_weight = self.Spa_ATT(concat_branch)
         elif self.use_rfca:
             output_branch = self.rfcaout(concat_branch)
+            #print(output_branch)
         else:
             feature_weight = self.Channel_ATT(concat_branch)
 
             weighted_branch = feature_weight * up_lowbranch
-
             output_branch = torch.cat((weighted_branch, high_branch), 1)#channle*2
+            output_branch = self.output(output_branch)#half the channle	
+            #print(output_branch.shape)
         return output_branch #output size should be (batch_size, high_channel, height, width)
 
 
@@ -608,6 +616,7 @@ class RFCAConv(nn.Module):
         x_w = self.pool_w(generate_feature).permute(0, 1, 3, 2)
         #x_w_max = self.pool_w_max(generate_feature).permute(0, 1, 3, 2)
         if self.mix_c:
+            #print("mix C")
             x_c_mean = torch.mean(generate_feature, dim=1, keepdim=True)
             x_c_max = torch.max(generate_feature, dim=1, keepdim=True)[0]
             x_c = torch.cat([x_c_mean, x_c_max], dim=1)
