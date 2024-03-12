@@ -17,21 +17,19 @@ from train_utils import logutils
 import random
 
 def create_model(num_joints, load_pretrain_weights=False, with_FFCA=True, 
-                 spatial_attention=False, skip_connection=True,swap_att=False,
-                 use_rfca=True,all_rfca=False, mix_c=True,
-                 pag_fusion=True,my_fusion=True):
+                skip_connection=True,
+                use_rfca=True, mix_c=True,
+                pag_fusion=True,my_fusion=True):
     #base_channel=32 means HRnet-w32
     model = HighResolutionNet(base_channel=18, num_joints=num_joints,
-                               with_FFCA=with_FFCA, spatial_attention=spatial_attention,
-                                 skip_connection=skip_connection,swap_att=swap_att,
-                                 use_rfca=use_rfca,all_rfca=all_rfca,mix_c=mix_c,
-                                 pag_fusion=pag_fusion,my_fusion=my_fusion)
+                                with_FFCA=with_FFCA,
+                                skip_connection=skip_connection,
+                                use_rfca=use_rfca,mix_c=mix_c,
+                                pag_fusion=pag_fusion,my_fusion=my_fusion)
     print("~~~~Current Model Setting~~~~\n","with_FFCA: "
-          ,with_FFCA,"\n","spatial_attention: "
-          ,spatial_attention,"\n","skip_connection: "
+          ,with_FFCA,"\n","\n","skip_connection: "
           ,skip_connection,"\n","use_rfca: "
-          ,use_rfca,"\n","all_rfca: "
-          ,all_rfca,"\n","mix_c: "
+          ,use_rfca,"\n","\n","mix_c: "
           ,mix_c,"\n")
     if load_pretrain_weights:
         # 载入预训练模型权重
@@ -281,10 +279,8 @@ def train(num,
         config['resume'] = ''
         config['with_FFCA'] = True
         config['with_RFCA'] = True 
-        config['all_RFCA'] = False
         config['mix_c'] = True
         config['skip_connection'] = True
-        config['SPA_att'] = False
         config['start-epoch'] = 0
         config['s1_weight'] = 1
         config['sc_weight'] = 1
@@ -293,7 +289,7 @@ def train(num,
         config['use_awloss'] = True
         config['use_loss_decay'] = False
         config['pag_fusion'] = True
-        config['my_fusion'] = False
+        config['my_fusion'] = True
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
@@ -385,10 +381,8 @@ def train(num,
     #model = create_model(num_joints=run_config['num_joints'], with_FFCA=run_config['with_FFCA'])
     model = create_model(num_joints=run_config['num_joints'],
                          with_FFCA=run_config['with_FFCA'],
-                         spatial_attention=run_config['SPA_att'],
                          skip_connection=run_config['skip_connection'],
                          use_rfca = run_config['with_RFCA'],
-                         all_rfca = run_config['all_RFCA'],
                          mix_c=run_config['mix_c'],
                          pag_fusion=run_config['pag_fusion'],
                          my_fusion=run_config['my_fusion'])
