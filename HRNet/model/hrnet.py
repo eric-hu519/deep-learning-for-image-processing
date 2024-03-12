@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-
+import torch.nn.functional as F
 from einops import rearrange
 BN_MOMENTUM = 0.1
 
@@ -178,7 +178,8 @@ class StageModule(nn.Module):
 class HighResolutionNet(nn.Module):
     def __init__(self, base_channel: int = 32, num_joints: int = 4, 
                  with_FFCA = True, spatial_attention = True, skip_connection = True, 
-                 swap_att = False, use_rfca = True, all_rfca = True, mix_c = True):
+                 swap_att = False, use_rfca = True, all_rfca = True, mix_c = True,
+                 pag_fusion = True, my_fusion = True):
         super().__init__()
         # Stem
         self.with_FFCA = with_FFCA
@@ -189,6 +190,8 @@ class HighResolutionNet(nn.Module):
         self.use_rfca = use_rfca
         self.mix_c = mix_c
         self.all_rfca = all_rfca
+        self.pag_fusion = pag_fusion
+        self.my_fusion = my_fusion
         #self.con11 = nn.Conv2d(base_channel, base_channel, kernel_size=1, stride=1, bias=False)
         #self.con12 = nn.Conv2d(base_channel*2, base_channel*2, kernel_size=1, stride=1, bias=False)
         #self.con13 = nn.Conv2d(base_channel*4, base_channel*4, kernel_size=1, stride=1, bias=False)
@@ -237,12 +240,15 @@ class HighResolutionNet(nn.Module):
             self.transition1 = nn.ModuleList([
                 nn.Sequential(
                     #RFCAConv(256, base_channel,3,1),
+                    #ScConv(256),
                     nn.Conv2d(256, base_channel, kernel_size=3, stride=1, padding=1, bias=False),
                     nn.BatchNorm2d(base_channel, momentum=BN_MOMENTUM),
                     nn.ReLU(inplace=True)
                 ),
                 nn.Sequential(
-                    nn.Sequential(  # 这里又使用一次Sequential是为了适配原项目中提供的权重
+                    nn.Sequential(
+                        #ScConv(256),
+                          # 这里又使用一次Sequential是为了适配原项目中提供的权重
                         #RFCAConv(256, base_channel * 2,3,2),
                         nn.Conv2d(256, base_channel * 2, kernel_size=3, stride=2, padding=1, bias=False),
                         nn.BatchNorm2d(base_channel * 2, momentum=BN_MOMENTUM),
@@ -276,6 +282,7 @@ class HighResolutionNet(nn.Module):
                 nn.Identity(),  # None,  - Used in place of "None" because it is callable
                 nn.Sequential(
                     nn.Sequential(
+                        #ScConv(base_channel * 2),
                         #RFCAConv(base_channel * 2, base_channel * 4,3,2),
                         nn.Conv2d(base_channel * 2, base_channel * 4, kernel_size=3, stride=2, padding=1, bias=False),
                         nn.BatchNorm2d(base_channel * 4, momentum=BN_MOMENTUM),
@@ -313,6 +320,7 @@ class HighResolutionNet(nn.Module):
                 nn.Identity(),  # None,  - Used in place of "None" because it is callable
                 nn.Sequential(
                     nn.Sequential(
+                        #ScConv(base_channel * 4),
                         #RFCAConv(base_channel * 4, base_channel * 8,3,2),
                         nn.Conv2d(base_channel * 4, base_channel * 8, kernel_size=3, stride=2, padding=1, bias=False),
                         nn.BatchNorm2d(base_channel * 8, momentum=BN_MOMENTUM),
@@ -342,7 +350,7 @@ class HighResolutionNet(nn.Module):
         if not self.with_FFCA:
             self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel,use_rfca=False, all_rfca = False, mix_c=self.mix_c))
         else:
-            self.decoder = myDecoder(base_channel,self.swap_att, self.use_rfca,self.mix_c)
+            self.decoder = myDecoder(base_channel,self.swap_att, self.use_rfca,self.mix_c,self.pag_fusion,self.my_fusion)
         
         # Final layer，通道个数要与num_joints一致
         self.final_layer = nn.Conv2d(base_channel, num_joints, kernel_size=1, stride=1)
@@ -398,8 +406,9 @@ class HighResolutionNet(nn.Module):
             #x[1] = self.gelu(self.con12(x[1] + skip_2))
             #x[2] = self.gelu(self.con13(x[2] + skip_3))
             #x[3] = self.gelu(self.con14(x[3] + skip_4))
+
             #print("skipped")
-            #x[0] = skip_1 + x[0]
+            x[0] = skip_1 + x[0]
             x[1] = skip_2 + x[1]
             x[2] = skip_3 + x[2]
             x[3] = skip_4 + x[3]
@@ -425,20 +434,99 @@ class HighResolutionNet(nn.Module):
         return x
 
 
+class PagFM(nn.Module):
+    def __init__(self, low_channels, high_channels, after_relu=False, with_channel=False, BatchNorm=nn.BatchNorm2d, my_fusion = True, mix_c = True):
+        super(PagFM, self).__init__()
+        self.with_channel = with_channel
+        self.after_relu = after_relu
+        self.my_fusion = my_fusion
+        #x:high channel,y:low_channel
+        #self.conv1 = nn.Conv2d(low_channels,high_channels,kernel_size=3,padding=0)
+    
+
+        if my_fusion:
+            self.att = CA_module(high_channels,kernel_size=3,mix_c=mix_c)
+            self.f_x = nn.Sequential(
+                                    feature_gen(high_channels,high_channels,kernel_size=3,stride=1),
+                                    BatchNorm(high_channels)
+                                    )
+            self.f_y = nn.Sequential(
+                                    feature_gen(low_channels,high_channels,kernel_size=3,stride=1),
+                                    
+                                    BatchNorm(high_channels)
+                                    )
+        else:
+            self.f_x = nn.Sequential(
+                                    nn.Conv2d(high_channels, high_channels, 
+                                              kernel_size=1, bias=False),
+                                    BatchNorm(high_channels)
+                                    )
+            self.f_y = nn.Sequential(
+                                    nn.Conv2d(high_channels, high_channels, 
+                                              kernel_size=1, bias=False),
+                                    BatchNorm(high_channels)
+                                    )
+        if with_channel:
+            if my_fusion:
+                self.up = nn.Sequential(
+                                        feature_gen(high_channels,high_channels,kernel_size=1,stride=1),
+                                        BatchNorm(high_channels)
+                                    )
+            else:
+                self.up = nn.Sequential(
+                                        nn.Conv2d(high_channels,high_channels, 
+                                                kernel_size=1, bias=False),
+                                        BatchNorm(high_channels)
+                                    )
+        if after_relu:
+            self.relu = nn.ReLU(inplace=True)
+        
+    def forward(self, x, y):
+        #x is high,y is low
+        input_size = x.size()
+        if self.after_relu:
+            y = self.relu(y)
+            x = self.relu(x)
+        #生成特征图
+        y_q = self.f_y(y)
+        #上采样插值,y_q形状=x_k
+        x_k = self.f_x(x)
+        if self.my_fusion:
+            input_size = x_k.size()
+        y_q = F.interpolate(y_q, size=[input_size[2], input_size[3]],
+                            mode='bilinear', align_corners=False)
+        if self.with_channel:
+            sim_map = torch.sigmoid(self.up(x_k * y_q))
+        else:
+            sim_map = torch.sigmoid(torch.sum(x_k * y_q, dim=1).unsqueeze(1))
+        if self.my_fusion:
+            x = (1-sim_map)*x_k + sim_map*y_q
+            x = self.att(x)
+        else:
+            y = F.interpolate(y, size=[input_size[2], input_size[3]],
+                                mode='bilinear', align_corners=False)
+            x = (1-sim_map)*x + sim_map*y
+        
+        return x
 
 class myFFCA(nn.Module):
     """
     FFCA - Fusion Feature Channel Attention Module
     """
-    def __init__(self, low_channel,high_channel,swap_att = False, use_rfca = True, mix_c =True):#输入为低级分支的通道个数
+    def __init__(self, low_channel,high_channel,swap_att = False, 
+                 use_rfca = True, mix_c =True, pag_fusion = True, 
+                 my_fusion = True):#输入为低级分支的通道个数
         super().__init__()
         #low_branch size should be (batch_size, 2*high_channel, height/2, width/2)
 
         self.swap_att = swap_att
         self.use_rfca = use_rfca
+        self.my_fusion = my_fusion
         self.low_channle = low_channel
         self.high_channle = high_channel
         self.sigmoid = nn.Sigmoid()
+        self.pag_fusion = pag_fusion
+        self.channel_reduce = nn.Conv2d(self.low_channle, self.high_channle,1,padding=1)
         #process input branch
         self.inbranch_process = nn.Sequential(
             #nn.ConvTranspose2d(self.low_channle,self.low_channle,kernel_size=4,stride=2,padding=1,bias=False),
@@ -449,36 +537,47 @@ class myFFCA(nn.Module):
             nn.Conv2d(self.low_channle, self.high_channle,3,padding=1)
         )
         #Swap position for channel att and spatial att
-        if self.swap_att:
-            self.Spa_ATT = SPAtt()
+        if not pag_fusion:
+            if self.swap_att:
+                self.Spa_ATT = SPAtt()
+            elif not self.use_rfca:
+                self.Channel_ATT = Channel_ATT(self.low_channle, self.swap_att)
+            self.output = nn.Sequential(
+                #3*3conv
+                nn.Conv2d(self.low_channle, self.high_channle,3,padding=1),
+                self.sigmoid
+            )
+            if self.use_rfca:
+                self.rfcaout = RFCAConv(self.high_channle*2, self.high_channle,3,1,mix_c=mix_c)
         else:
-            self.Channel_ATT = Channel_ATT(self.low_channle, self.swap_att)
-        self.output = nn.Sequential(
-            #3*3conv
-            nn.Conv2d(self.low_channle, self.high_channle,3,padding=1),
-            self.sigmoid
-        )
-        
-        self.rfcaout = RFCAConv(self.high_channle*2, self.high_channle,3,1,mix_c=mix_c)
+            self.PagFM = PagFM(self.low_channle, self.high_channle, after_relu = False, with_channel = True, my_fusion = self.my_fusion, mix_c = mix_c)
+
         #self.whfusion = whfusion(self.high_channle, self.high_channle,3,1)
         #self.mixedwh = whfusion(self.high_channle*2, self.high_channle,3,1)
         #self.conv1 = nn.Conv2d(2*self.high_channle, 2*self.high_channle,kernel_size=1,bias=False)
     def forward(self, low_branch, high_branch):
-        up_lowbranch = self.inbranch_process(low_branch)
+        
         #concatenate two branch
-        concat_branch = torch.cat((up_lowbranch, high_branch), 1)#channle*2
-        if self.swap_att:
-            feature_weight = self.Spa_ATT(concat_branch)
-        elif self.use_rfca:
-            output_branch = self.rfcaout(concat_branch)
-            #print(output_branch)
-        else:
-            feature_weight = self.Channel_ATT(concat_branch)
+        if not self.pag_fusion: 
+            up_lowbranch = self.inbranch_process(low_branch)
+            concat_branch = torch.cat((up_lowbranch, high_branch), 1)#channle*2
+            if self.swap_att:
+                feature_weight = self.Spa_ATT(concat_branch)
+            elif self.use_rfca:
+                output_branch = self.rfcaout(concat_branch)
+                #print(output_branch)
+            else:
+                feature_weight = self.Channel_ATT(concat_branch)
 
-            weighted_branch = feature_weight * up_lowbranch
-            output_branch = torch.cat((weighted_branch, high_branch), 1)#channle*2
-            output_branch = self.output(output_branch)#half the channle	
-            #print(output_branch.shape)
+                weighted_branch = feature_weight * up_lowbranch
+                output_branch = torch.cat((weighted_branch, high_branch), 1)#channle*2
+                output_branch = self.output(output_branch)#half the channle	
+                #print(output_branch.shape)
+        elif self.pag_fusion and self.my_fusion:
+            output_branch = self.PagFM(high_branch, low_branch)
+        elif self.pag_fusion and (not self.my_fusion):
+            up_lowbranch = self.channel_reduce(low_branch)
+            output_branch = self.PagFM(high_branch, up_lowbranch)
         return output_branch #output size should be (batch_size, high_channel, height, width)
 
 
@@ -486,12 +585,14 @@ class myDecoder(nn.Module):
     """
     Decoder with FFCA modules.
     """
-    def __init__(self,basechannel,swap_att = False, use_rfca = True, mix_c = True):
+    def __init__(self,basechannel,swap_att = False, 
+                 use_rfca = True, mix_c = True,
+                 pag_fusion = True, my_fusion = True):
         super().__init__()
         #from higher ffca to lower ffca
-        self.ffca3 = myFFCA(2*basechannel,basechannel, swap_att, use_rfca, mix_c)
-        self.ffca2 = myFFCA(4*basechannel,2*basechannel, swap_att, use_rfca, mix_c)
-        self.ffca1 = myFFCA(8*basechannel,4*basechannel, swap_att, use_rfca, mix_c)
+        self.ffca3 = myFFCA(2*basechannel,basechannel, swap_att, use_rfca, mix_c, pag_fusion, my_fusion)
+        self.ffca2 = myFFCA(4*basechannel,2*basechannel, swap_att, use_rfca, mix_c, pag_fusion, my_fusion)
+        self.ffca1 = myFFCA(8*basechannel,4*basechannel, swap_att, use_rfca, mix_c, pag_fusion, my_fusion)
         
     def forward(self, x):
         branch3, branch2, branch1, branch0 = x
@@ -624,6 +725,7 @@ class RFCAConv(nn.Module):
             #combine x_h and x_c
             x_h = x_h * self.pool_h(x_c)
             x_w = x_w * self.pool_w(x_c).permute(0, 1, 3, 2)
+
         y = torch.cat([x_h, x_w], dim=2)
         y = self.conv1(y)
         y = self.bn1(y)
@@ -637,8 +739,74 @@ class RFCAConv(nn.Module):
 
         a_w = self.conv_w(x_w).sigmoid()
 
-        out = self.conv(generate_feature * a_w * a_h)
+        out = self.conv(generate_feature * a_w * a_h )
 
         #out = out * self.spatt(out)
  
+        return out
+class feature_gen(nn.Module):
+    def __init__(self, inp,mip,kernel_size,stride):
+        super(feature_gen, self).__init__()
+        self.kernel_size = kernel_size
+        self.generate = nn.Sequential(nn.Conv2d(inp,inp * (kernel_size**2),kernel_size,padding=kernel_size//2,
+                                                stride=stride,groups=inp,
+                                                bias =False),
+                                        nn.BatchNorm2d(inp * (kernel_size**2)),
+                                        nn.ReLU()
+                                        )
+        self.conv1 = nn.Conv2d(inp, mip, kernel_size=1, stride=1, padding=0)
+    def forward(self,x):
+        b,c = x.shape[0:2]
+        generate_feature = self.generate(x)
+        h,w = generate_feature.shape[2:]
+        generate_feature = generate_feature.view(b,c,self.kernel_size**2,h,w)
+        
+        generate_feature = rearrange(generate_feature, 'b c (n1 n2) h w -> b c (h n1) (w n2)', n1=self.kernel_size,
+                              n2=self.kernel_size)
+        generate_feature = self.conv1(generate_feature)
+        return generate_feature
+    
+class CA_module(nn.Module):
+    def __init__(self,inp,kernel_size =1,mix_c = True):
+        super(CA_module, self).__init__()
+        self.mix_c = mix_c
+        self.pool_h = nn.AdaptiveAvgPool2d((None, 1))
+        self.pool_w = nn.AdaptiveAvgPool2d((1, None))
+        self.conv_h = nn.Conv2d(inp, inp, kernel_size=1, stride=1, padding=0)
+        self.conv_w = nn.Conv2d(inp, inp, kernel_size=1, stride=1, padding=0)
+        self.conv = nn.Sequential(nn.Conv2d(inp,inp,kernel_size,stride=kernel_size))
+        self.conv1 = nn.Conv2d(inp, inp, kernel_size=1, stride=1, padding=0)
+        self.bn1 = nn.BatchNorm2d(inp)
+        self.act = h_swish()
+        #self.spatt = SPAtt()
+        self.conmaxmin = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
+    def forward(self,generate_feature):
+        x_h = self.pool_h(generate_feature)
+        #x_h_max = self.pool_h_max(generate_feature)
+        x_w = self.pool_w(generate_feature).permute(0, 1, 3, 2)
+        #x_w_max = self.pool_w_max(generate_feature).permute(0, 1, 3, 2)
+        if self.mix_c:
+            #print("mix C")
+            x_c_mean = torch.mean(generate_feature, dim=1, keepdim=True)
+            x_c_max = torch.max(generate_feature, dim=1, keepdim=True)[0]
+            x_c = torch.cat([x_c_mean, x_c_max], dim=1)
+            x_c = self.conmaxmin(x_c)
+            #combine x_h and x_c
+            x_h = x_h * self.pool_h(x_c)
+            x_w = x_w * self.pool_w(x_c).permute(0, 1, 3, 2)
+
+        y = torch.cat([x_h, x_w], dim=2)
+        y = self.conv1(y)
+        y = self.bn1(y)
+        y = self.act(y) 
+        
+        h,w = generate_feature.shape[2:]
+        x_h, x_w = torch.split(y, [h, w], dim=2)
+        x_w = x_w.permute(0, 1, 3, 2)
+
+        a_h = self.conv_h(x_h).sigmoid()
+
+        a_w = self.conv_w(x_w).sigmoid()
+
+        out = self.conv(generate_feature * a_w * a_h )
         return out

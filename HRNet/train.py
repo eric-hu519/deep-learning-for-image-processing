@@ -18,12 +18,14 @@ import random
 
 def create_model(num_joints, load_pretrain_weights=False, with_FFCA=True, 
                  spatial_attention=False, skip_connection=True,swap_att=False,
-                 use_rfca=True,all_rfca=False, mix_c=True):
+                 use_rfca=True,all_rfca=False, mix_c=True,
+                 pag_fusion=True,my_fusion=True):
     #base_channel=32 means HRnet-w32
-    model = HighResolutionNet(base_channel=32, num_joints=num_joints,
+    model = HighResolutionNet(base_channel=18, num_joints=num_joints,
                                with_FFCA=with_FFCA, spatial_attention=spatial_attention,
                                  skip_connection=skip_connection,swap_att=swap_att,
-                                 use_rfca=use_rfca,all_rfca=all_rfca,mix_c=mix_c)
+                                 use_rfca=use_rfca,all_rfca=all_rfca,mix_c=mix_c,
+                                 pag_fusion=pag_fusion,my_fusion=my_fusion)
     print("~~~~Current Model Setting~~~~\n","with_FFCA: "
           ,with_FFCA,"\n","spatial_attention: "
           ,spatial_attention,"\n","skip_connection: "
@@ -191,6 +193,8 @@ def cross_validate(args = None):
                 print("failed fold: ",failed_fold)
             #save metrics and val_accuracy as txt
             with open("sweep_log/run-{}-metrics.txt".format(sweep_run_id), "a") as f:
+                #add current time without seconds
+                f.write("time: {}\n".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")))
                 f.write("metrics: {}\n".format(metrics))
                 f.write("val_accuracy: {}\n".format(val_accuracy))
                 #记录失败的fold
@@ -259,7 +263,7 @@ def train(num,
         sweep_id = 'unknown_test'
         sweep_run_name = 'unknown_2'
         config = parameters_dict
-        config['lr'] = 0.003
+        config['lr'] = 0.00367
         config['wd'] = 1e-4
         config['lr-steps'] = 2
         config['fixed-size'] = 256
@@ -287,7 +291,9 @@ def train(num,
         config['fh1_weight'] = 1
         config['fh2_weight'] = 1
         config['use_awloss'] = True
-        config['use_loss_decay'] = True
+        config['use_loss_decay'] = False
+        config['pag_fusion'] = True
+        config['my_fusion'] = False
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
@@ -383,7 +389,9 @@ def train(num,
                          skip_connection=run_config['skip_connection'],
                          use_rfca = run_config['with_RFCA'],
                          all_rfca = run_config['all_RFCA'],
-                         mix_c=run_config['mix_c'])
+                         mix_c=run_config['mix_c'],
+                         pag_fusion=run_config['pag_fusion'],
+                         my_fusion=run_config['my_fusion'])
     # print(model)
 
     model.to(device)
@@ -582,6 +590,8 @@ def train(num,
         "use_loss_decay": run_config['use_loss_decay'],
         "skip_connection": run_config['skip_connection'],
         "SPA_ATT": run_config['SPA_att'],
+        "PAG_Fusion": run_config['pag_fusion'],
+        "MY_Fusion": run_config['my_fusion'],
         # 添加其他训练参数...
     }
     with open("{}/train_config_fold{}.txt".format(run_config['last-dir'],num), "w") as f:
@@ -734,7 +744,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', default=False, help='resume mode')
     parser.add_argument('--sweep_id', default='f5cyaw6i', help='sweep id')
     parser.add_argument('--project',default='Spine-final',help='project name')
-    parser.add_argument('--use_kfold', default=True, help='use kfold cross validation')
+    parser.add_argument('--use_kfold', default=False, help='use kfold cross validation')
     args = parser.parse_args()
     main(args)
 

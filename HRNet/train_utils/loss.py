@@ -85,8 +85,8 @@ class AW_loss(object):
                 # [B, num_kps, H, W] -> [B, num_kps]
         #logits为网络预测的Heatmap，heatmap为网格法计算的Heatmap
         diff_map = abs(logits-heatmaps)
-        loss = 0
-        loss = torch.where(diff_map >= (self.theta**amp), self.linear_part(logits,heatmaps*amp), self.nonlinear_part(logits,torch.pow(heatmaps,amp)))
+        loss = 0 
+        loss = torch.where(diff_map >= (self.theta*decay), self.linear_part(logits,torch.pow(heatmaps,amp)), self.nonlinear_part(logits,torch.pow(heatmaps,amp)))
         loss = torch.sum(loss) / bs
         return loss
    
