@@ -45,7 +45,7 @@ def increment_path(path, exist_ok=False, sep='', mkdir=False):
         dir.mkdir(parents=True, exist_ok=True)  # make directory
     return path
 
-def sweep_override(config):
+def sweep_override(config,is_kfold = True):
     #limit_batch to avoid cuda overdrive
     run_config = config
     if config['fixed-size'] < 512:
@@ -85,8 +85,12 @@ def sweep_override(config):
         run_config['lr-steps'] = [stage1,stage2]
     run_config['amp'] = bool(config['amp'])
     run_config['savebest'] = bool(config['savebest'])
-    run_config['last-dir'] = increment_path(config['output-dir'], mkdir=True)
-    run_config['test-dir'] = increment_path(config['test-dir'], mkdir=True)
+    if is_kfold:
+        run_config['last-dir'] = increment_path(config['output-dir'], mkdir=True)
+        
+    else:
+        run_config['test-dir'] = increment_path(config['test-dir'], mkdir=True)
+        run_config['last-dir'] = run_config['test-dir']
     return run_config    
 def reset_wandb_env():
     exclude = {

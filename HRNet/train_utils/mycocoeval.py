@@ -9,6 +9,7 @@ import copy
 import torch
 import json
 import os
+from .calculate_angle import cal_pt
 #import calculate_angle
 class COCOeval:
     # Interface for evaluating detection on the Microsoft COCO dataset.
@@ -80,7 +81,9 @@ class COCOeval:
         self.stats = []                     # result summarization
         self.ious = {}  
         self.error = []                    # ious between all gts and dts
-        self.std = []                      # std of error
+        self.std = []   
+        self.angle = []
+        self.angle_std = []                   # std of error
         if not cocoGt is None:
             self.params.imgIds = sorted(cocoGt.getImgIds())
             self.params.catIds = sorted(cocoGt.getCatIds())
@@ -155,18 +158,24 @@ class COCOeval:
             computeIoU = self.computeOks #用computeOks来计算IoU
         for imgId in p.imgIds:
             for catId in catIds:
-                iou, err = computeIoU(imgId, catId, is_last_epoch, save_dir)
+                iou, err, angle_err = computeIoU(imgId, catId, is_last_epoch, save_dir)
                 self.ious[(imgId, catId)] = iou
                 self.error.append(err)#获得每100张各图片的error
+                self.angle.append(angle_err)
         evaluateImg = self.evaluateImg
         #计算各点的平均误差值
         self.error = np.array(self.error)
+        self.angle = np.array(self.angle)
         #save last epoch error to txt
         if is_last_epoch and save_dir is not None:
             np.savetxt(save_dir+'/error.txt', self.error)
+            np.savetxt(save_dir+'/angle_error.txt', self.angle)
         self.std = np.std(self.error, axis=0)#按列求标准差
+        self.angle_std = np.std(self.angle, axis=0)
         #print(self.std.shape)
         self.error = np.mean(self.error, axis=0)#按列求平均值
+        self.angle = np.mean(self.angle, axis=0)
+
         
         maxDet = p.maxDets[-1]
         self.evalImgs = [evaluateImg(imgId, catId, areaRng, maxDet)
@@ -247,10 +256,11 @@ class COCOeval:
                 bb = gt['bbox']
                 x0 = bb[0] - bb[2]; x1 = bb[0] + bb[2] * 2
                 y0 = bb[1] - bb[3]; y1 = bb[1] + bb[3] * 2
-                
+                gt_angle = cal_pt(xg,yg)
                 for i, dt in enumerate(dts):
                     d = np.array(dt['keypoints'])
                     xd = d[0::3]; yd = d[1::3]
+                    dt_angle = cal_pt(xd,yd)
                     if k1>0:
                         # measure the per-keypoint distance if keypoints visible
                         #计算各可见关键点的x,y的误差
@@ -264,11 +274,12 @@ class COCOeval:
                         dy = np.max((z, y0-yd),axis=0)+np.max((z, yd-y1),axis=0)
                     e = (dx**2 + dy**2) / vars / (gt['area']+np.spacing(1)) / 2
                     abs_e = np.sqrt(dx**2 + dy**2)
+                    angle_e = np.abs(gt_angle - dt_angle)
                     if k1 > 0:
                         e=e[vg > 0]
                     ious[i, j] = np.sum(np.exp(-e)) / e.shape[0]
                     
-        return ious, abs_e
+        return ious, abs_e, angle_e
 
     def evaluateImg(self, imgId, catId, aRng, maxDet):
         '''
@@ -512,7 +523,7 @@ class COCOeval:
             stats[11] = _summarize(0, areaRng='large', maxDets=self.params.maxDets[2])
             return stats
         def _summarizeKps():
-            stats = np.zeros((18,))
+            stats = np.zeros((24))
             stats[0] = _summarize(1, maxDets=20)
             stats[1] = _summarize(1, maxDets=20, iouThr=.5)
             stats[2] = _summarize(1, maxDets=20, iouThr=.75)
@@ -526,12 +537,20 @@ class COCOeval:
             for i in range(10,14):
                 stats[i] = self.error[i-10]
                 stats[i+4] = self.std[i-10]
+            for i in range(18,21):
+                stats[i] = self.angle[i-18]
+                stats[i+3] = self.angle_std[i-18]
             print('mean abs error and std:\n',
                    'SC= ', stats[10],'\t','std= ',stats[14],'\n', 
                    'S1= ',stats[11],'\t','std= ',stats[15],'\n', 
                    'F1C= ',stats[12],'\t','std= ',stats[16],'\n',
-                   'F2C= ',stats[13],'\t','std= ',stats[17])
-            
+                   'F2C= ',stats[13],'\t','std= ',stats[17],'\n')
+            print('mean angle err and std:\n',
+                  'ss_angle= ', stats[18],'\t','std= ',stats[21],'\n',
+                  'pt_angle= ', stats[19],'\t','std= ',stats[22],'\n',
+                  'pi_angle= ', stats[20],'\t','std= ',stats[23],'\n',)
+            self.angle={}
+            self.angle_std={}
             self.error={}
             self.std={}
             return stats

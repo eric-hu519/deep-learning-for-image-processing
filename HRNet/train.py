@@ -288,16 +288,17 @@ def train(num,
         config['fh2_weight'] = 1
         config['use_awloss'] = True
         config['use_loss_decay'] = False
-        config['pag_fusion'] = True
+        config['pag_fusion'] = False
         config['my_fusion'] = True
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
-    run_config = logutils.sweep_override(config)
+    run_config = logutils.sweep_override(config,is_kfold=args.use_kfold)
     #print("run_config: ",run_config,"\n")
     device = torch.device(run_config['device'] if torch.cuda.is_available() else "cpu")
 
-
+    if test_dataset is not None:
+        run_config['last-dir'] = run_config['test-dir']
     # save coco_info
     results_file = "results{}.txt".format(datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     print("*" * 40)
@@ -376,6 +377,7 @@ def train(num,
                                       pin_memory=True,
                                       num_workers=nw,
                                       collate_fn=test_dataset.collate_fn)
+                                      
 
     # create model
     #model = create_model(num_joints=run_config['num_joints'], with_FFCA=run_config['with_FFCA'])
@@ -426,6 +428,12 @@ def train(num,
     s1_std = []
     fh1_std = []
     fh2_std = []
+    ss_angle = []
+    pt_angle = []
+    pi_angle = []
+    ss_angle_std = []
+    pt_angle_std = []
+    pi_angle_std = []
     val_loss = []
     best_err = np.zeros((4,))
     is_last_epoch = False
@@ -465,7 +473,7 @@ def train(num,
                 test_loss = utils.eval_loss(model, test_data_loader, device=device, epoch=epoch, scaler=scaler,use_aw=run_config['use_awloss'],decay=decay,amp=amp)
                 print("test_loss: ", test_loss.item(), "\n")
                 test_info = utils.evaluate(model, test_data_loader, device=device,
-                                          flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['test-dir']))
+                                          flip=True, is_last_epoch=True, save_dir=str(run_config['test-dir']))
                 test_info.append(test_loss.item())
                 #test_val_map= test_info[1]  # @0.5 mAP
                 test_s1_abs_error = test_info[10]
@@ -476,10 +484,26 @@ def train(num,
                 test_sc_std = test_info[15]
                 test_fh1_std = test_info[16]
                 test_fh2_std = test_info[17]
+                print("test_s1_abs_error: ",test_s1_abs_error,"\t", 'std=', test_s1_std, '\n'
+                      "test_sc_abs_error: ",test_sc_abs_error,"\t", 'std=', test_sc_std, '\n'
+                      "test_fh1_abs_error: ",test_fh1_abs_error,"\t", 'std=', test_fh1_std, '\n' 
+                      "test_fh2_abs_error: ",test_fh2_abs_error,"\t", 'std=', test_fh2_std, '\n') 
                 test_accurracy = (test_s1_abs_error+test_sc_abs_error+test_fh1_abs_error+test_fh2_abs_error)/4
                 print("test_accuracy: ",test_accurracy,"\n")
                 test_info.append(test_accurracy)
-                results_file = "{}test_result.txt".format(run_config['test-dir'])
+                ss_angle_err = test_info[18]
+                pt_angle_err = test_info[19]
+                pi_angle_err = test_info[20]
+                ss_angle_std = test_info[21]
+                pt_angle_std = test_info[22]
+                pi_angle_std = test_info[23]
+                print("ss_angle_err: ",ss_angle_err,"\t", 'std=', ss_angle_std, '\n'
+                        "pt_angle_err: ",pt_angle_err,"\t", 'std=', pt_angle_std, '\n'
+                        "pi_angle_err: ",pi_angle_err,"\t", 'std=', pi_angle_std, '\n')
+                angle_acc = (ss_angle_err+pt_angle_err+pi_angle_err)/3
+                print("angle_acc: ",angle_acc,"\n")
+                test_info.append(angle_acc)
+                results_file = "{}/test_result.txt".format(run_config['test-dir'])
                 with open(results_file, "a") as f:
                     # 写入的数据包括coco指标还有loss和learning rate
                     result_info = [f"{i:.4f}" for i in test_info] + [f"{lr:.6f}"]
@@ -487,8 +511,12 @@ def train(num,
                     f.write(txt + "\n")
         # evaluate on the test dataset
         # is last epoch is used to save the best model and run results
-        coco_info = utils.evaluate(model, val_data_loader, device=device,
-                                   flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['last-dir']))
+        if test_dataset is not None:
+            coco_info = utils.evaluate(model, val_data_loader, device=device,
+                                    flip=True, is_last_epoch=False, save_dir=str(run_config['last-dir']))
+        else:
+            coco_info = utils.evaluate(model, val_data_loader, device=device,
+                                    flip=True, is_last_epoch=is_last_epoch, save_dir=str(run_config['last-dir']))
         coco_info.append(mloss.item())
         print("current fold: ",num,"\n") 
         print("val_loss: ", coco_info[-1],"\n")
@@ -515,6 +543,13 @@ def train(num,
         sc_std.append(coco_info[15])
         fh1_std.append(coco_info[16])
         fh2_std.append(coco_info[17])
+        ss_angle.append(coco_info[18])
+        pt_angle.append(coco_info[19])
+        pi_angle.append(coco_info[20])
+        ss_angle_std.append(coco_info[21])
+        pt_angle_std.append(coco_info[22])
+        pi_angle_std.append(coco_info[23])
+
 
         val_loss.append(coco_info[-1])
         if check_loss_list(s1_abs_error, s1_abs_error[-1]):
@@ -578,12 +613,10 @@ def train(num,
         "keypoints weight": person_kps_info["kps_weights"],
         "use_FFCA": run_config['with_FFCA'],
         "use_RFCA": run_config['with_RFCA'],
-        "all_RFCA": run_config['all_RFCA'],
         "mix_c": run_config['mix_c'],
         "use_awloss": run_config['use_awloss'],
         "use_loss_decay": run_config['use_loss_decay'],
         "skip_connection": run_config['skip_connection'],
-        "SPA_ATT": run_config['SPA_att'],
         "PAG_Fusion": run_config['pag_fusion'],
         "MY_Fusion": run_config['my_fusion'],
         # 添加其他训练参数...

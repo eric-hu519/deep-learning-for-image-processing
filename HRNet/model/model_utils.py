@@ -10,7 +10,8 @@ class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, use_rfca = True, mix_c =True):
         super(BasicBlock, self).__init__()
         if use_rfca:
-            self.conv1 = RFCAConv(inplanes, planes,3,stride,mix_c=mix_c)
+            #self.conv1 = RFCAConv(inplanes, planes,3,stride,mix_c=mix_c)
+            self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         else:
             self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
@@ -97,7 +98,9 @@ class StageModule(nn.Module):
             if use_rfca:
                 branch  = nn.Sequential(
                     BasicBlock(w, w, use_rfca = use_rfca,  mix_c = mix_c),
-                    BasicBlock(w, w, use_rfca = use_rfca, mix_c = mix_c)
+                    BasicBlock(w, w, use_rfca = use_rfca, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = use_rfca, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = use_rfca, mix_c = mix_c),
                 )
             else:
                 branch = nn.Sequential(

@@ -1,23 +1,25 @@
 import math
-def cal_pt(points):
-    if points[0][0] < points[1][0]:
-        sc_x = points[1][0]
-        sc_y = points[1][1]
+import numpy as np
+#x,y is a list
+def cal_pt(x,y):
+    if x[0] < x[1]:
+        sc_x = x[0]
+        sc_y = y[0]
         
-        s1_x = points[0][0]
-        s1_y = points[0][1]
+        s1_x = x[1]
+        s1_y = y[1]
     else:
-        sc_x = points[0][0]
-        sc_y = points[0][1]
+        sc_x = x[1]
+        sc_y = y[1]
 
-        s1_x = points[1][0]
-        s1_y = points[1][1]
+        s1_x = x[0]
+        s1_y = y[0]
 
-    fh1_x = points[2][0]
-    fh1_y = points[2][1]
+    fh1_x = x[2]
+    fh1_y = y[2]
 
-    fh2_x = points[3][0]
-    fh2_y = points[3][1]
+    fh2_x = x[3]
+    fh2_y = y[3]
 
     fh_mid = [(fh1_x + fh2_x) / 2, (fh1_y + fh2_y) / 2]
     
@@ -28,5 +30,5 @@ def cal_pt(points):
     p_angle = abs(math.atan(p_slope) * 180 / math.pi)
     pt_angle = 90 - p_angle
     pi_angle = pt_angle + ss_angle
-
-    return ss_angle,pt_angle,pi_angle
+    
+    return np.array([ss_angle,pt_angle,pi_angle])
