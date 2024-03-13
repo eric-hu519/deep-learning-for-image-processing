@@ -103,6 +103,7 @@ def cross_validate(args = None):
     dataset = CocoKeypoint(config['data-path'], "allanno", transforms=None, fixed_size=config['fixed-size'])
     print("len of dataset: ",len(dataset),"\n")
     metrics = []
+    angle_acc = []
     save_path = []
     num = 0
     failed_fold = []
@@ -162,8 +163,9 @@ def cross_validate(args = None):
                 )
                 metrics.append(result[0])
                 save_path.append(result[1])
+                angle_acc.append(result[2])
                 torch.cuda.empty_cache()
-                print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n")
+                print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n","angle_acc: ",result[2],"\n")
                 
                 
             #terminate current fold if training failed
@@ -177,16 +179,19 @@ def cross_validate(args = None):
             
         else:
             val_accuracy=sum(metrics) / len(metrics)
+            angle_accuracy = sum(angle_acc) / len(angle_acc)
             #get the postion of the minimum number in metrics
             #将failed fold插入到metrics中，防止best_fold位置错误
             if len(failed_fold) != 0:   
                 for i in failed_fold:
                     metrics.insert(i-1,-1)
+                    angle_acc.insert(i-1,-1)
             #get the best fold
             best_fold = metrics.index(min(metrics))+1
             
             
-            print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(best_fold))
+            print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(best_fold),
+                  "\n","angle_accuracy: ",angle_accuracy,"\n")
             if len(failed_fold) != 0:
                 print("failed fold: ",failed_fold)
             #save metrics and val_accuracy as txt
@@ -195,6 +200,7 @@ def cross_validate(args = None):
                 f.write("time: {}\n".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")))
                 f.write("metrics: {}\n".format(metrics))
                 f.write("val_accuracy: {}\n".format(val_accuracy))
+                f.write("angle_accuracy: {}\n".format(angle_accuracy))
                 #记录失败的fold
                 if len(failed_fold) != 0:
                     f.write("failed_fold: {}\n".format(failed_fold))
@@ -279,7 +285,7 @@ def train(num,
         config['resume'] = ''
         config['with_FFCA'] = True
         config['with_RFCA'] = True 
-        config['mix_c'] = True
+        config['mix_c'] = False
         config['skip_connection'] = True
         config['start-epoch'] = 0
         config['s1_weight'] = 1
@@ -288,7 +294,7 @@ def train(num,
         config['fh2_weight'] = 1
         config['use_awloss'] = True
         config['use_loss_decay'] = False
-        config['pag_fusion'] = False
+        config['pag_fusion'] = True
         config['my_fusion'] = True
     #convert config to args
     if isinstance(config['fixed-size'],list):
@@ -431,9 +437,9 @@ def train(num,
     ss_angle = []
     pt_angle = []
     pi_angle = []
-    ss_angle_std = []
-    pt_angle_std = []
-    pi_angle_std = []
+    ss_std = []
+    pt_std = []
+    pi_std = []
     val_loss = []
     best_err = np.zeros((4,))
     is_last_epoch = False
@@ -546,9 +552,9 @@ def train(num,
         ss_angle.append(coco_info[18])
         pt_angle.append(coco_info[19])
         pi_angle.append(coco_info[20])
-        ss_angle_std.append(coco_info[21])
-        pt_angle_std.append(coco_info[22])
-        pi_angle_std.append(coco_info[23])
+        ss_std.append(coco_info[21])
+        pt_std.append(coco_info[22])
+        pi_std.append(coco_info[23])
 
 
         val_loss.append(coco_info[-1])
@@ -579,7 +585,9 @@ def train(num,
 
     #val acc equals the mean error of all points of the last epoch
     val_accuracy = (s1_abs_error[-1]+sc_abs_error[-1]+fh1_abs_error[-1]+fh2_abs_error[-1])/4
+    angle_acc = (ss_angle[-1]+pt_angle[-1]+pi_angle[-1])/3
     print("fold {}----val_accuracy: ".format(num),val_accuracy,"\n")
+    print("fold {}----angle_acc: ".format(num),angle_acc,"\n")
 
 
     #save best model and last model
@@ -647,7 +655,7 @@ def train(num,
     if args is None:
         run.log(dict(val_accuracy=val_accuracy))
         run.finish()
-    return val_accuracy, run_config['last-dir']
+    return val_accuracy, run_config['last-dir'], angle_acc
 
 
 #sweep configuration for wandb swe
@@ -771,7 +779,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', default=False, help='resume mode')
     parser.add_argument('--sweep_id', default='f5cyaw6i', help='sweep id')
     parser.add_argument('--project',default='Spine-final',help='project name')
-    parser.add_argument('--use_kfold', default=False, help='use kfold cross validation')
+    parser.add_argument('--use_kfold', default=True, help='use kfold cross validation')
     args = parser.parse_args()
     main(args)
 
