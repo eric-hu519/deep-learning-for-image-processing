@@ -284,7 +284,7 @@ def train(num,
         config['savebest'] = True
         config['resume'] = ''
         config['with_FFCA'] = True
-        config['with_RFCA'] = False
+        config['with_RFCA'] = True
         config['mix_c'] = True
         config['skip_connection'] = True
         config['start-epoch'] = 0
@@ -294,8 +294,8 @@ def train(num,
         config['fh2_weight'] = 1
         config['use_awloss'] = True
         config['use_loss_decay'] = False
-        config['pag_fusion'] = False
-        config['my_fusion'] = False
+        config['pag_fusion'] = True
+        config['my_fusion'] = True
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]

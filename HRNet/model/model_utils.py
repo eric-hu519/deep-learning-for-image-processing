@@ -97,8 +97,8 @@ class StageModule(nn.Module):
             #only 2 basic block when use rfca
             if use_rfca:
                 branch  = nn.Sequential(
-                    #BasicBlock(w, w, use_rfca = use_rfca,  mix_c = mix_c),
-                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = False,  mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
                     BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
                     BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
                 )
@@ -174,7 +174,7 @@ class StageModule(nn.Module):
         return x_fused
 
 class PagFM(nn.Module):
-    def __init__(self, low_channels, high_channels, after_relu=False, with_channel=True, BatchNorm=nn.BatchNorm2d, my_fusion = True, mix_c = True):
+    def __init__(self, low_channels, high_channels, after_relu=True, with_channel=True, BatchNorm=nn.BatchNorm2d, my_fusion = True, mix_c = True):
         super(PagFM, self).__init__()
         self.with_channel = with_channel
         self.after_relu = after_relu
@@ -207,6 +207,7 @@ class PagFM(nn.Module):
                                     )
         if with_channel:
             if my_fusion:
+                self.Channel_ATT = Channel_ATT(high_channels)
                 self.up = nn.Sequential(
                                         feature_gen(high_channels,high_channels,kernel_size=1,stride=1),
                                         #nn.Conv2d(high_channels,high_channels, 
@@ -229,19 +230,26 @@ class PagFM(nn.Module):
             y = self.relu(y)
             x = self.relu(x)
         #生成特征图
-        y_q = self.f_y(y)
+        if self.my_fusion: 
+            y = F.interpolate(y, size=[input_size[2], input_size[3]],
+                            mode='bilinear', align_corners=False)
+            y_q = self.f_y(y)
+        else:
+            y_q = self.f_y(y)
+            y_q = F.interpolate(y_q, size=[input_size[2], input_size[3]],
+                            mode='bilinear', align_corners=False)
+        
         #上采样插值,y_q形状=x_k
         x_k = self.f_x(x)
         if self.my_fusion:
             input_size = x_k.size()
-        y_q = F.interpolate(y_q, size=[input_size[2], input_size[3]],
-                            mode='bilinear', align_corners=False)
+        
         if self.with_channel:
-            sim_map = torch.sigmoid(self.up(x_k * y_q))
+            sim_map = torch.sigmoid(self.Channel_ATT(self.up(x_k * y_q))*(self.up(x_k * y_q)))#sim map越大，说明两个特征图越相似
         else:
             sim_map = torch.sigmoid(torch.sum(x_k * y_q, dim=1).unsqueeze(1))
         if self.my_fusion:
-            x = (1-sim_map)*x_k + sim_map*y_q
+            x = sim_map*x_k + (1-sim_map)*y_q
             x = self.att(x)
         else:
             y = F.interpolate(y, size=[input_size[2], input_size[3]],
@@ -350,7 +358,7 @@ class Channel_ATT(nn.Module):
         self.low_channle = low_channel
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
-        self.fc = nn.Linear(self.low_channle, self.low_channle//2, bias=False)
+        self.fc = nn.Linear(self.low_channle, self.low_channle, bias=False)
 
         self.softmax = nn.Softmax()
         
@@ -361,6 +369,7 @@ class Channel_ATT(nn.Module):
         #change size from[batch_size, channel, 1, 1] to [batch_size, channel]
         maxpooled_branch_flat = maxpooled_branch.view(maxpooled_branch.size(0), -1)
         avgpooled_branch_flat = avgpooled_branch.view(avgpooled_branch.size(0), -1)
+
         # Pass the tensors through the fully connected layer
         feature_weight = self.softmax(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
 
