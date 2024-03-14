@@ -753,6 +753,8 @@ def main(args):
     torch.cuda.manual_seed(3407)
     torch.cuda.manual_seed_all(3407)
     torch.backends.cudnn.deterministic = True
+    #os.environ['CUBLAS_WORKSPACE_CONFIG'] = ":4096:8"
+    #torch.use_deterministic_algorithms(True)
     torch.backends.cudnn.benchmark = False
     sweep_config['parameters'] = parameters_dict
     if not args.debug:

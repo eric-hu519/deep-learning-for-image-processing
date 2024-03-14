@@ -230,14 +230,14 @@ class PagFM(nn.Module):
             y = self.relu(y)
             x = self.relu(x)
         #生成特征图
-        if self.my_fusion: 
-            y = F.interpolate(y, size=[input_size[2], input_size[3]],
-                            mode='bilinear', align_corners=False)
+        if self.my_fusion:
+            #NOTE：DO NOT USE "Bilinear Mode" OR THE RESULTS WONT BE REPRODUCED
+            y = nn.Upsample(size=[input_size[2], input_size[3]], mode='nearest')(y)
             y_q = self.f_y(y)
         else:
             y_q = self.f_y(y)
             y_q = F.interpolate(y_q, size=[input_size[2], input_size[3]],
-                            mode='bilinear', align_corners=False)
+                            mode='nearest')
         
         #上采样插值,y_q形状=x_k
         x_k = self.f_x(x)
@@ -363,12 +363,19 @@ class Channel_ATT(nn.Module):
         self.softmax = nn.Softmax()
         
     def forward(self, x):
+        #_,_,h,w = x.size()
+        #NOTE: DO NOT USE ADAPTIVE POOL OR THE RESULTS WONT BE REPRODUCED
+        #max_pool = nn.MaxPool2d((h, w), stride=(h, w))
+        #avg_pool = nn.AvgPool2d((h, w), stride=(h, w))
         maxpooled_branch = self.max_pool(x)
+        
         avgpooled_branch = self.avg_pool(x)
 
         #change size from[batch_size, channel, 1, 1] to [batch_size, channel]
         maxpooled_branch_flat = maxpooled_branch.view(maxpooled_branch.size(0), -1)
         avgpooled_branch_flat = avgpooled_branch.view(avgpooled_branch.size(0), -1)
+
+        
 
         # Pass the tensors through the fully connected layer
         feature_weight = self.softmax(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
@@ -432,9 +439,15 @@ class RFCAConv(nn.Module):
         
         generate_feature = rearrange(generate_feature, 'b c (n1 n2) h w -> b c (h n1) (w n2)', n1=self.kernel_size,
                               n2=self.kernel_size)
+                              
+        #_, _, h, w = generate_feature.size()
+        #NOTE: DO NOT USE ADAPTIVE POOL OR THE RESULTS WONT BE REPRODUCED
         x_h = self.pool_h(generate_feature)
-        #x_h_max = self.pool_h_max(generate_feature)
         x_w = self.pool_w(generate_feature).permute(0, 1, 3, 2)
+        #avg_pool_h = nn.AvgPool2d((1, w), stride=(1, w))
+        #x_h = avg_pool_h(generate_feature)
+        #avg_pool_w = nn.AvgPool2d((h, 1), stride=(h, 1))
+        #x_w = avg_pool_w(generate_feature).permute(0, 1, 3, 2)
         #x_w_max = self.pool_w_max(generate_feature).permute(0, 1, 3, 2)
         if self.mix_c:
             #print("mix C")
@@ -499,9 +512,14 @@ class CA_module(nn.Module):
         #self.spatt = SPAtt()
         self.conmaxmin = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
     def forward(self,generate_feature):
+        #_, _, h, w = generate_feature.size()
+        #NOTE: DO NOT USE ADAPTIVE POOL OR THE RESULTS WONT BE REPRODUCED
         x_h = self.pool_h(generate_feature)
-        #x_h_max = self.pool_h_max(generate_feature)
         x_w = self.pool_w(generate_feature).permute(0, 1, 3, 2)
+        
+        
+        #x_h_max = self.pool_h_max(generate_feature)
+        #x_w = self.pool_w(generate_feature).permute(0, 1, 3, 2)
         #x_w_max = self.pool_w_max(generate_feature).permute(0, 1, 3, 2)
         if self.mix_c:
             #print("mix C")
