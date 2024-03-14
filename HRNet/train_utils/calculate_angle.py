@@ -24,7 +24,7 @@ def cal_pt(x,y):
     fh_mid = [(fh1_x + fh2_x) / 2, (fh1_y + fh2_y) / 2]
     
     s_slope = (s1_y - sc_y) / (s1_x - sc_x)
-    ss_angle = abs(math.atan(s_slope) * 180 / math.pi)
+    ss_angle = abs(math.atan(s_slope) * 180 / math.pi)#in degree
     
     p_slope = (sc_y - fh_mid[1]) / (sc_x - fh_mid[0])
     p_angle = abs(math.atan(p_slope) * 180 / math.pi)
@@ -32,3 +32,18 @@ def cal_pt(x,y):
     pi_angle = pt_angle + ss_angle
     
     return np.array([ss_angle,pt_angle,pi_angle])
+
+def cal_CMAE(pred, target):
+    #length = len(pred)
+    cos_item = np.sum(np.cos(np.radians(pred - target)))
+    sin_item = np.sum(np.sin(np.radians(pred - target)))
+
+    CMAE = math.atan2(sin_item, cos_item) * 180 / math.pi
+    return CMAE
+
+def cal_SMAE(pred,target):
+    SMAE = np.sum(np.abs(pred - target))/np.sum(pred+target)
+    return SMAE
+def cal_ED(pred,target):
+    ED = np.sqrt(np.sum(np.square(pred-target)))
+    return ED

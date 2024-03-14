@@ -10,8 +10,8 @@ class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, use_rfca = True, mix_c =True):
         super(BasicBlock, self).__init__()
         if use_rfca:
-            #self.conv1 = RFCAConv(inplanes, planes,3,stride,mix_c=mix_c)
-            self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+            self.conv1 = RFCAConv(inplanes, planes,3,stride,mix_c=mix_c)
+            #self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         else:
             self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
@@ -97,10 +97,10 @@ class StageModule(nn.Module):
             #only 2 basic block when use rfca
             if use_rfca:
                 branch  = nn.Sequential(
-                    BasicBlock(w, w, use_rfca = use_rfca,  mix_c = mix_c),
-                    BasicBlock(w, w, use_rfca = use_rfca, mix_c = mix_c),
-                    BasicBlock(w, w, use_rfca = use_rfca, mix_c = mix_c),
-                    BasicBlock(w, w, use_rfca = use_rfca, mix_c = mix_c),
+                    #BasicBlock(w, w, use_rfca = use_rfca,  mix_c = mix_c),
+                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
                 )
             else:
                 branch = nn.Sequential(
@@ -271,8 +271,9 @@ class myFFCA(nn.Module):
 
         if pag_fusion:
             self.PagFM = PagFM(self.low_channle, self.high_channle, after_relu = False, with_channel = True, my_fusion = my_fusion, mix_c = mix_c)
-            if my_fusion:
-                 self.channel_reduce = nn.Conv2d(self.low_channle, self.high_channle,1,padding=1)
+            if not my_fusion:
+                self.channel_reduce = RFCAConv(self.low_channle, self.high_channle,3,1,mix_c=mix_c)
+                self.high_branch = RFCAConv(self.high_channle, self.high_channle,3,1,mix_c=mix_c)
         else:
             self.inbranch_process = nn.Sequential(
                 #nn.ConvTranspose2d(self.low_channle,self.low_channle,kernel_size=4,stride=2,padding=1,bias=False),
@@ -300,7 +301,9 @@ class myFFCA(nn.Module):
             if self.my_fusion:
                 output_branch = self.PagFM(high_branch, low_branch)
             else:
+
                 up_lowbranch = self.channel_reduce(low_branch)
+                high_branch = self.high_branch(high_branch)
                 output_branch = self.PagFM(high_branch, up_lowbranch)
                 #output_branch = self.rfcaout(output_branch)
         else:

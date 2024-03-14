@@ -121,7 +121,7 @@ def cross_validate(args = None):
 
         indices = list(range(len(dataset)))
 
-        np.random.seed(3407)
+        np.random.seed(0)
         np.random.shuffle(indices)
 
         train_index = indices[:train_size]
@@ -284,8 +284,8 @@ def train(num,
         config['savebest'] = True
         config['resume'] = ''
         config['with_FFCA'] = True
-        config['with_RFCA'] = True 
-        config['mix_c'] = False
+        config['with_RFCA'] = False
+        config['mix_c'] = True
         config['skip_connection'] = True
         config['start-epoch'] = 0
         config['s1_weight'] = 1
@@ -294,8 +294,8 @@ def train(num,
         config['fh2_weight'] = 1
         config['use_awloss'] = True
         config['use_loss_decay'] = False
-        config['pag_fusion'] = True
-        config['my_fusion'] = True
+        config['pag_fusion'] = False
+        config['my_fusion'] = False
     #convert config to args
     if isinstance(config['fixed-size'],list):
         config['fixed-size'] = config['fixed-size'][0]
@@ -503,12 +503,14 @@ def train(num,
                 ss_angle_std = test_info[21]
                 pt_angle_std = test_info[22]
                 pi_angle_std = test_info[23]
+                test_CMAE = test_info[24]
                 print("ss_angle_err: ",ss_angle_err,"\t", 'std=', ss_angle_std, '\n'
                         "pt_angle_err: ",pt_angle_err,"\t", 'std=', pt_angle_std, '\n'
                         "pi_angle_err: ",pi_angle_err,"\t", 'std=', pi_angle_std, '\n')
                 angle_acc = (ss_angle_err+pt_angle_err+pi_angle_err)/3
                 print("angle_acc: ",angle_acc,"\n")
                 test_info.append(angle_acc)
+                test_info.append(test_CMAE)
                 results_file = "{}/test_result.txt".format(run_config['test-dir'])
                 with open(results_file, "a") as f:
                     # 写入的数据包括coco指标还有loss和learning rate
@@ -555,7 +557,7 @@ def train(num,
         ss_std.append(coco_info[21])
         pt_std.append(coco_info[22])
         pi_std.append(coco_info[23])
-
+        
 
         val_loss.append(coco_info[-1])
         if check_loss_list(s1_abs_error, s1_abs_error[-1]):
@@ -779,7 +781,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', default=False, help='resume mode')
     parser.add_argument('--sweep_id', default='f5cyaw6i', help='sweep id')
     parser.add_argument('--project',default='Spine-final',help='project name')
-    parser.add_argument('--use_kfold', default=True, help='use kfold cross validation')
+    parser.add_argument('--use_kfold', default=False, help='use kfold cross validation')
     args = parser.parse_args()
     main(args)
 

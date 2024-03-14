@@ -115,7 +115,7 @@ class HighResolutionNet(nn.Module):
             #StageModule(input_branches=4, output_branches=1, c=base_channel)
         )
         if not self.with_FFCA:
-            self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel,use_rfca=False, all_rfca = False, mix_c=self.mix_c))
+            self.stage4.add_module("StageModule",StageModule(input_branches=4, output_branches=1, c=base_channel,use_rfca=False, mix_c=self.mix_c))
         else:
             self.decoder = myDecoder(base_channel, self.use_rfca,self.mix_c,self.pag_fusion,self.my_fusion)
         
@@ -161,9 +161,10 @@ class HighResolutionNet(nn.Module):
 
         if self.skip_connection:
             x[0] = skip_1 + x[0]
-            x[1] = skip_2 + x[1]
-            x[2] = skip_3 + x[2]
-            x[3] = skip_4 + x[3]
+            if self.with_FFCA:
+                x[1] = skip_2 + x[1]
+                x[2] = skip_3 + x[2]
+                x[3] = skip_4 + x[3]
         if self.with_FFCA:
             x = self.decoder(x)
             x = self.final_layer(x)
