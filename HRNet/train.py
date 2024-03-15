@@ -292,7 +292,7 @@ def train(num,
         config['sc_weight'] = 1
         config['fh1_weight'] = 1
         config['fh2_weight'] = 1
-        config['use_awloss'] = True
+        config['use_awloss'] = False    
         config['use_loss_decay'] = False
         config['pag_fusion'] = True
         config['my_fusion'] = True

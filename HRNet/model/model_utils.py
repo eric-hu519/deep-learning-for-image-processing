@@ -99,8 +99,8 @@ class StageModule(nn.Module):
                 branch  = nn.Sequential(
                     BasicBlock(w, w, use_rfca = False,  mix_c = mix_c),
                     BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
-                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
-                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
                 )
             else:
                 branch = nn.Sequential(
@@ -184,6 +184,7 @@ class PagFM(nn.Module):
     
 
         if my_fusion:
+            self.conv_transpose = nn.ConvTranspose2d(low_channels, low_channels, kernel_size=2, stride=2)
             self.att = CA_module(high_channels,kernel_size=3,mix_c=mix_c)
             self.f_x = nn.Sequential(
                                     feature_gen(high_channels,high_channels,kernel_size=3,stride=1),
@@ -224,22 +225,23 @@ class PagFM(nn.Module):
             self.relu = nn.ReLU(inplace=True)
         
     def forward(self, x, y):
-        #x is high,y is low
+        #x channel is c,y is 2*c
         input_size = x.size()
         if self.after_relu:
             y = self.relu(y)
             x = self.relu(x)
-        #生成特征图
+        #upsample
         if self.my_fusion:
-            #NOTE：DO NOT USE "Bilinear Mode" OR THE RESULTS WONT BE REPRODUCED
-            y = nn.Upsample(size=[input_size[2], input_size[3]], mode='nearest')(y)
+            #NOTE：For reproducibility,DO NOT use "Bilinear" interpolation
+            #y = nn.Upsample(size=[input_size[2], input_size[3]], mode='nearest')(y)
+            y = self.conv_transpose(y)
             y_q = self.f_y(y)
         else:
             y_q = self.f_y(y)
             y_q = F.interpolate(y_q, size=[input_size[2], input_size[3]],
                             mode='nearest')
         
-        #上采样插值,y_q形状=x_k
+        
         x_k = self.f_x(x)
         if self.my_fusion:
             input_size = x_k.size()
@@ -249,11 +251,11 @@ class PagFM(nn.Module):
         else:
             sim_map = torch.sigmoid(torch.sum(x_k * y_q, dim=1).unsqueeze(1))
         if self.my_fusion:
-            x = sim_map*x_k + (1-sim_map)*y_q
+            x = (sim_map)*x_k + (1-sim_map)*y_q
             x = self.att(x)
         else:
             y = F.interpolate(y, size=[input_size[2], input_size[3]],
-                                mode='bilinear', align_corners=False)
+                                mode='nearest', align_corners=False)
             x = (1-sim_map)*x + sim_map*y
         
         return x
