@@ -99,8 +99,8 @@ class StageModule(nn.Module):
                 branch  = nn.Sequential(
                     BasicBlock(w, w, use_rfca = False,  mix_c = mix_c),
                     BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
-                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
-                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
                 )
             else:
                 branch = nn.Sequential(
@@ -251,7 +251,7 @@ class PagFM(nn.Module):
         else:
             sim_map = torch.sigmoid(torch.sum(x_k * y_q, dim=1).unsqueeze(1))
         if self.my_fusion:
-            x = (sim_map)*x_k + (1-sim_map)*y_q
+            x = (1-sim_map)*x_k + (sim_map)*y_q
             x = self.att(x)
         else:
             y = F.interpolate(y, size=[input_size[2], input_size[3]],

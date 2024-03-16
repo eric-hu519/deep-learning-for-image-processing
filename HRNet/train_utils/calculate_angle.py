@@ -38,7 +38,7 @@ def cal_CMAE(pred, target):
     cos_item = np.sum(np.cos(np.radians(pred - target)))
     sin_item = np.sum(np.sin(np.radians(pred - target)))
 
-    CMAE = math.atan2(sin_item, cos_item) * 180 / math.pi
+    CMAE = abs(math.atan2(sin_item, cos_item) * 180 / math.pi)
     return CMAE
 
 def cal_SMAE(pred,target):

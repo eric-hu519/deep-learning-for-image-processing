@@ -28,3 +28,4 @@ HRNet/tests/*
 HRNet/sweep_log/*
 .DS_Store
 HRNet/key_results.json
+*.png
