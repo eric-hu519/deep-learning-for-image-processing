@@ -53,7 +53,7 @@ def main(args):
     #plot angles with boxplot
     fig, ax = plt.subplots(1,3,figsize=(15,5))
     for angle in angles:
-        ax[angles.index(angle)].boxplot([metrics_dict[id+'_'+angle] for id in ids], labels=ids)
+        ax[angles.index(angle)].boxplot([metrics_dict[id+'_'+angle] for id in ids], labels=ids,showfliers=False,showmeans=True,showbox=True,meanline=True,medianprops=dict(color='r'))
         ax[angles.index(angle)].set_title(angle)
         #ax[angles.index(angle)].set_xticklabels(ids, rotation=45)
     fig.suptitle('Angle Error Boxplot')
@@ -64,7 +64,7 @@ def main(args):
     #plot errors with boxplot
     fig, ax = plt.subplots(1,4,figsize=(20,5))
     for keypoint in keypoints:
-        ax[keypoints.index(keypoint)].boxplot([metrics_dict[id+'_'+keypoint] for id in ids], labels=ids)
+        ax[keypoints.index(keypoint)].boxplot([metrics_dict[id+'_'+keypoint] for id in ids], labels=ids,showfliers=False,showmeans=True,showbox=True,meanline=True,medianprops=dict(color='r'))
         ax[keypoints.index(keypoint)].set_title(keypoint)
         #ax[keypoints.index(keypoint)].set_xticklabels(ids, rotation=45)
     fig.suptitle('Error Boxplot')
@@ -72,17 +72,7 @@ def main(args):
     plt.savefig(save_dir+'/error_boxplot.png')
     if args.display:
         plt.show()
-    #plot CMAE, SMAE, ED with barplot
-    fig, ax = plt.subplots(1,3,figsize=(15,5))
-    for metric in ['CMAE', 'SMAE', 'ED']:
-        ax[['CMAE', 'SMAE', 'ED'].index(metric)].bar(ids, [metrics_dict[id+'_'+metric] for id in ids])
-        ax[['CMAE', 'SMAE', 'ED'].index(metric)].set_title(metric)
-        #ax[['CMAE', 'SMAE', 'ED'].index(metric)].set_xticklabels(ids, rotation=45)
-    fig.suptitle('CMAE, SMAE, ED Barplot')
-    plt.tight_layout()
-    plt.savefig(save_dir+'/CMAE_SMAE_ED_barplot.png')
-    if args.display:
-        plt.show()
+
     
 
 def read_config_to_dict(filepath):
@@ -108,7 +98,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__)
     parser.add_argument('--logdir', default='./save_weights/test', help='log directory')
-    parser.add_argument('--ids', default='795 794',help='model ids to compare')
+    parser.add_argument('--ids', default='64 60',help='model ids to compare')
     parser.add_argument('--save_dir', default='./model_compare_results',help='metrics to compare')
     parser.add_argument('--metrics', default='angle_error error CMAE SMAE ED',help='metrics to compare')
     parser.add_argument('--display',default= False, help='display the results')

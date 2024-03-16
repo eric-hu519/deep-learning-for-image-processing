@@ -297,7 +297,7 @@ class myFFCA(nn.Module):
                 self.rfcaout = RFCAConv(self.high_channle*2, self.high_channle,3,1,mix_c=mix_c)
             else:
             
-                self.Channel_ATT = Channel_ATT(self.low_channle)
+                self.Channel_ATT = Channel_ATT(self.low_channle, my_fusion = False)
                 self.output = nn.Sequential(
                     #3*3conv
                     nn.Conv2d(self.low_channle, self.high_channle,3,padding=1),
@@ -355,12 +355,15 @@ class Channel_ATT(nn.Module):
     """
     Channel Attention Module
     """
-    def __init__(self, low_channel):
+    def __init__(self, low_channel, my_fusion = True):
         super().__init__()
         self.low_channle = low_channel
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
-        self.fc = nn.Linear(self.low_channle, self.low_channle, bias=False)
+        if my_fusion:
+            self.fc = nn.Linear(self.low_channle, self.low_channle, bias=False)
+        else:
+            self.fc = nn.Linear(self.low_channle, self.low_channle//2, bias=False)
 
         self.softmax = nn.Softmax()
         
