@@ -108,7 +108,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__)
     parser.add_argument('--logdir', default='./save_weights/test', help='log directory')
-    parser.add_argument('--ids', default='795 794',help='model ids to compare')
+    parser.add_argument('--ids', default='806 795 794',help='model ids to compare')
     parser.add_argument('--save_dir', default='./model_compare_results',help='metrics to compare')
     parser.add_argument('--metrics', default='angle_error error CMAE SMAE ED',help='metrics to compare')
     parser.add_argument('--display',default= False, help='display the results')
