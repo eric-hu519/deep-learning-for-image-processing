@@ -99,8 +99,8 @@ class StageModule(nn.Module):
                 branch  = nn.Sequential(
                     BasicBlock(w, w, use_rfca = False,  mix_c = mix_c),
                     BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
-                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
-                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
                 )
             else:
                 branch = nn.Sequential(
@@ -248,7 +248,8 @@ class PagFM(nn.Module):
             input_size = x_k.size()
         
         if self.with_channel:
-            sim_map = torch.sigmoid(self.Channel_ATT(self.up(x_k * y_q))*(self.up(x_k * y_q)))#sim map越大，说明两个特征图越相似
+            up_feature = self.up(x_k * y_q)
+            sim_map = torch.sigmoid(self.Channel_ATT(up_feature))#sim map越大，说明两个特征图越相似
         else:
             sim_map = torch.sigmoid(torch.sum(x_k * y_q, dim=1).unsqueeze(1))
         if self.my_fusion:
@@ -363,6 +364,7 @@ class Channel_ATT(nn.Module):
         self.low_channle = low_channel
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.my_fusion = my_fusion
         if my_fusion:
             self.fc = nn.Linear(self.low_channle, self.low_channle, bias=False)
         else:
@@ -386,7 +388,10 @@ class Channel_ATT(nn.Module):
         
 
         # Pass the tensors through the fully connected layer
-        feature_weight = self.softmax(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
+        if self.my_fusion:
+            feature_weight = (self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))
+        else: 
+            feature_weight = self.softmax(self.fc(maxpooled_branch_flat) + self.fc(avgpooled_branch_flat))/2
 
         
         #restore the size of weight from[batch_size, channel] to [batch_size, channel, 1, 1]
@@ -516,6 +521,7 @@ class CA_module(nn.Module):
         self.conv = nn.Sequential(nn.Conv2d(inp,inp,kernel_size,stride=kernel_size))
         self.conv1 = nn.Conv2d(inp, inp, kernel_size=1, stride=1, padding=0)
         self.bn1 = nn.BatchNorm2d(inp)
+        #self.bnc = nn.BatchNorm2d(1)
         self.act = h_swish()
         #self.spatt = SPAtt()
         self.conmaxmin = nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3)
@@ -536,6 +542,8 @@ class CA_module(nn.Module):
             x_c = torch.cat([x_c_mean, x_c_max], dim=1)
             x_c = self.conmaxmin(x_c)
             #combine x_h and x_c
+            #x_c = self.bnc(x_c)
+            #x_c = self.act(x_c)
             x_h = x_h * self.pool_h(x_c)
             x_w = x_w * self.pool_w(x_c).permute(0, 1, 3, 2)
 

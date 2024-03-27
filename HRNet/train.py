@@ -285,7 +285,7 @@ def train(num,
         config['resume'] = ''
         config['with_FFCA'] = True
         config['with_RFCA'] = True
-        config['mix_c'] = True
+        config['mix_c'] = False
         config['skip_connection'] = True
         config['start-epoch'] = 0
         config['s1_weight'] = 1
