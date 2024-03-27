@@ -105,6 +105,9 @@ def cross_validate(args = None):
     metrics = []
     angle_acc = []
     save_path = []
+    CMAE = []
+    SMAE = []
+    ED = []
     num = 0
     failed_fold = []
     if args.use_kfold:
@@ -164,8 +167,16 @@ def cross_validate(args = None):
                 metrics.append(result[0])
                 save_path.append(result[1])
                 angle_acc.append(result[2])
+                CMAE.append(result[3])
+                SMAE.append(result[4])
+                ED.append(result[5])
                 torch.cuda.empty_cache()
-                print("fold {} completed!".format(num),"\n", "accuray: ",result[0],"\n","angle_acc: ",result[2],"\n")
+                print("fold {} completed!".format(num),"\n", 
+                      "accuray: ",result[0],"\n",
+                      "angle_acc: ",result[2],"\n",
+                      "CMAE: ",result[3],"\n",
+                      "SMAE: ",result[4],"\n",
+                      "ED: ",result[5],"\n")
                 
                 
             #terminate current fold if training failed
@@ -179,7 +190,15 @@ def cross_validate(args = None):
             
         else:
             val_accuracy=sum(metrics) / len(metrics)
+            val_std = np.std(metrics)
             angle_accuracy = sum(angle_acc) / len(angle_acc)
+            angle_std = np.std(angle_acc)
+            CMAE_fold = sum(CMAE) / len(CMAE)
+            CMAE_std = np.std(CMAE)
+            SMAE_fold = sum(SMAE) / len(SMAE)
+            SMAE_std = np.std(SMAE)
+            ED_fold = sum(ED) / len(ED)
+            ED_std = np.std(ED)
             #get the postion of the minimum number in metrics
             #将failed fold插入到metrics中，防止best_fold位置错误
             if len(failed_fold) != 0:   
@@ -190,8 +209,18 @@ def cross_validate(args = None):
             best_fold = metrics.index(min(metrics))+1
             
             
-            print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n","bets fold is {}".format(best_fold),
-                  "\n","angle_accuracy: ",angle_accuracy,"\n")
+            print("Cross validation COMPLETE!! val_accuracy: ",val_accuracy,"\n",
+                    "val_std: ",val_std,"\n",
+                    "Angle_accuracy: ",angle_accuracy,"\n",
+                    "Angle_std: ",angle_std,"\n",
+                    "CMAE: ",CMAE_fold,"\n",
+                    "CMAE_std: ",CMAE_std,"\n",
+                    "SMAE: ",SMAE_fold,"\n",
+                    "SMAE_std: ",SMAE_std,"\n",
+                    "ED: ",ED_fold,"\n",
+                    "ED_std: ",ED_std,"\n",
+                  "Best fold is {}".format(best_fold),
+                  "\n")
             if len(failed_fold) != 0:
                 print("failed fold: ",failed_fold)
             #save metrics and val_accuracy as txt
@@ -200,7 +229,14 @@ def cross_validate(args = None):
                 f.write("time: {}\n".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")))
                 f.write("metrics: {}\n".format(metrics))
                 f.write("val_accuracy: {}\n".format(val_accuracy))
-                f.write("angle_accuracy: {}\n".format(angle_accuracy))
+                f.write("angle_acc:{}\n".format(angle_acc))
+                f.write("angle_accuracy: {} +- {}\n".format(angle_accuracy,angle_std))
+                f.write("CMAE: {}\n".format(CMAE_fold))
+                f.write("CMAE: {} +- {}\n".format(CMAE,CMAE_std))
+                f.write("SMAE: {}\n".format(SMAE_fold))
+                f.write("SMAE: {} +- {}\n".format(SMAE,SMAE_std))
+                f.write("ED: {}\n".format(ED_fold))
+                f.write("ED: {} +- {}\n".format(ED,ED_std))
                 #记录失败的fold
                 if len(failed_fold) != 0:
                     f.write("failed_fold: {}\n".format(failed_fold))
@@ -285,7 +321,7 @@ def train(num,
         config['resume'] = ''
         config['with_FFCA'] = True
         config['with_RFCA'] = True
-        config['mix_c'] = False
+        config['mix_c'] = True
         config['skip_connection'] = True
         config['start-epoch'] = 0
         config['s1_weight'] = 1
@@ -440,6 +476,12 @@ def train(num,
     ss_std = []
     pt_std = []
     pi_std = []
+    CMAE = []
+    CMAE_std = []
+    SMAE = []
+    SMAE_std = []
+    ED = []
+    ED_std = []
     val_loss = []
     best_err = np.zeros((4,))
     is_last_epoch = False
@@ -557,6 +599,12 @@ def train(num,
         ss_std.append(coco_info[21])
         pt_std.append(coco_info[22])
         pi_std.append(coco_info[23])
+        CMAE.append(coco_info[24])
+        CMAE_std.append(coco_info[25])
+        SMAE.append(coco_info[26])
+        SMAE_std.append(coco_info[27])
+        ED.append(coco_info[28])
+        ED_std.append(coco_info[29])
         
 
         val_loss.append(coco_info[-1])
@@ -590,6 +638,9 @@ def train(num,
     angle_acc = (ss_angle[-1]+pt_angle[-1]+pi_angle[-1])/3
     print("fold {}----val_accuracy: ".format(num),val_accuracy,"\n")
     print("fold {}----angle_acc: ".format(num),angle_acc,"\n")
+    print("fold{}----CMAE: ".format(num),CMAE[-1],"\n")
+    print("fold{}----SMAE: ".format(num),SMAE[-1],"\n")
+    print("fold{}----ED: ".format(num),ED[-1],"\n")
 
 
     #save best model and last model
@@ -657,7 +708,7 @@ def train(num,
     if args is None:
         run.log(dict(val_accuracy=val_accuracy))
         run.finish()
-    return val_accuracy, run_config['last-dir'], angle_acc
+    return val_accuracy, run_config['last-dir'], angle_acc,CMAE[-1],SMAE[-1],ED[-1]
 
 
 #sweep configuration for wandb swe
@@ -783,7 +834,7 @@ if __name__ == '__main__':
     parser.add_argument('--resume', default=False, help='resume mode')
     parser.add_argument('--sweep_id', default='f5cyaw6i', help='sweep id')
     parser.add_argument('--project',default='Spine-final',help='project name')
-    parser.add_argument('--use_kfold', default=False, help='use kfold cross validation')
+    parser.add_argument('--use_kfold', default=True, help='use kfold cross validation')
     args = parser.parse_args()
     main(args)
 
