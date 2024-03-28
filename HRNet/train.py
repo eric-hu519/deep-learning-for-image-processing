@@ -230,15 +230,15 @@ def cross_validate(args = None):
                 #add current time without seconds
                 f.write("time: {}\n".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")))
                 f.write("metrics: {}\n".format(metrics))
-                f.write("val_accuracy: {}\n".format(val_accuracy))
+                f.write("val_accuracy: {} +-{}\n".format(val_accuracy,val_std))
                 f.write("angle_acc:{}\n".format(angle_acc))
                 f.write("angle_accuracy: {} +- {}\n".format(angle_accuracy,angle_std))
-                f.write("CMAE: {}\n".format(CMAE_fold))
-                f.write("CMAE: {} +- {}\n".format(CMAE,CMAE_std))
-                f.write("SMAE: {}\n".format(SMAE_fold))
-                f.write("SMAE: {} +- {}\n".format(SMAE,SMAE_std))
-                f.write("ED: {}\n".format(ED_fold))
-                f.write("ED: {} +- {}\n".format(ED,ED_std))
+                f.write("CMAE: {} +- {}\n".format(CMAE_fold,CMAE_std))
+                f.write("CMAE: {}\n".format(CMAE))
+                f.write("SMAE: {} +- {}\n".format(SMAE_fold,SMAE_std))
+                f.write("SMAE: {}\n".format(SMAE))
+                f.write("ED: {} +- {}\n".format(ED_fold,ED_std))
+                f.write("ED: {}\n".format(ED))
                 #记录失败的fold
                 if len(failed_fold) != 0:
                     f.write("failed_fold: {}\n".format(failed_fold))
@@ -322,17 +322,17 @@ def train(num,
         config['savebest'] = True
         config['resume'] = ''
         config['with_FFCA'] = True
-        config['with_RFCA'] = False
+        config['with_RFCA'] = True
         config['mix_c'] = True
-        config['skip_connection'] = False
+        config['skip_connection'] = True
         config['start-epoch'] = 0
         config['s1_weight'] = 1
         config['sc_weight'] = 1
         config['fh1_weight'] = 1
         config['fh2_weight'] = 1
-        config['use_awloss'] = False    
+        config['use_awloss'] = True  
         config['use_loss_decay'] = False
-        config['pag_fusion'] = False
+        config['pag_fusion'] = True
         config['my_fusion'] = True
     #convert config to args
     if isinstance(config['fixed-size'],list):
