@@ -547,7 +547,7 @@ class COCOeval:
             stats[11] = _summarize(0, areaRng='large', maxDets=self.params.maxDets[2])
             return stats
         def _summarizeKps():
-            stats = np.zeros((31))
+            stats = np.zeros((30))
             stats[0] = _summarize(1, maxDets=20)
             stats[1] = _summarize(1, maxDets=20, iouThr=.5)
             stats[2] = _summarize(1, maxDets=20, iouThr=.75)
@@ -564,12 +564,12 @@ class COCOeval:
             for i in range(18,21):
                 stats[i] = self.angle[i-18]
                 stats[i+3] = self.angle_std[i-18]
-            stats[25] = self.CMAE
-            stats[26] = self.CMAE_std
-            stats[27] = self.SMAE
-            stats[28] = self.SMAE_std
-            stats[29] = self.ED
-            stats[30] = self.ED_std
+            stats[24] = self.CMAE
+            stats[25] = self.CMAE_std
+            stats[26] = self.SMAE
+            stats[27] = self.SMAE_std
+            stats[28] = self.ED
+            stats[29] = self.ED_std
             print('mean abs error and std:\n',
                    'SC= ', stats[10],'\t','std= ',stats[14],'\n', 
                    'S1= ',stats[11],'\t','std= ',stats[15],'\n', 
@@ -579,9 +579,9 @@ class COCOeval:
                   'ss_angle= ', stats[18],'\t','std= ',stats[21],'\n',
                   'pt_angle= ', stats[19],'\t','std= ',stats[22],'\n',
                   'pi_angle= ', stats[20],'\t','std= ',stats[23],'\n',)
-            print('CMAE: ', stats[25],'','+-',stats[26],'\n',)
-            print('SMAE: ', 100*stats[27],'','+-',100*stats[28],'%','\n',)
-            print('ED: ', stats[29],'','+-',stats[30],'\n',)
+            print('CMAE: ', stats[24],'','+-',stats[25],'\n',)
+            print('SMAE: ', 100*stats[26],'','+-',100*stats[27],'%','\n',)
+            print('ED: ', stats[28],'','+-',stats[29],'\n',)
             self.angle={}
             self.angle_std={}
             self.error={}

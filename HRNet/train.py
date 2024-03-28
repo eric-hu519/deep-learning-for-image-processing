@@ -224,6 +224,8 @@ def cross_validate(args = None):
             if len(failed_fold) != 0:
                 print("failed fold: ",failed_fold)
             #save metrics and val_accuracy as txt
+            if os.path.exists("sweep_log") == False:
+                os.makedirs("sweep_log")
             with open("sweep_log/run-{}-metrics.txt".format(sweep_run_id), "a") as f:
                 #add current time without seconds
                 f.write("time: {}\n".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M")))
@@ -320,17 +322,17 @@ def train(num,
         config['savebest'] = True
         config['resume'] = ''
         config['with_FFCA'] = True
-        config['with_RFCA'] = True
+        config['with_RFCA'] = False
         config['mix_c'] = True
-        config['skip_connection'] = True
+        config['skip_connection'] = False
         config['start-epoch'] = 0
         config['s1_weight'] = 1
         config['sc_weight'] = 1
         config['fh1_weight'] = 1
         config['fh2_weight'] = 1
-        config['use_awloss'] = True    
+        config['use_awloss'] = False    
         config['use_loss_decay'] = False
-        config['pag_fusion'] = True
+        config['pag_fusion'] = False
         config['my_fusion'] = True
     #convert config to args
     if isinstance(config['fixed-size'],list):
@@ -546,6 +548,9 @@ def train(num,
                 pt_angle_std = test_info[22]
                 pi_angle_std = test_info[23]
                 test_CMAE = test_info[24]
+                test_CMAE_std = test_info[25]
+                test_SMAE = test_info[26]
+                test_SMAE_std = test_info[27]
                 print("ss_angle_err: ",ss_angle_err,"\t", 'std=', ss_angle_std, '\n'
                         "pt_angle_err: ",pt_angle_err,"\t", 'std=', pt_angle_std, '\n'
                         "pi_angle_err: ",pi_angle_err,"\t", 'std=', pi_angle_std, '\n')
@@ -639,7 +644,7 @@ def train(num,
     print("fold {}----val_accuracy: ".format(num),val_accuracy,"\n")
     print("fold {}----angle_acc: ".format(num),angle_acc,"\n")
     print("fold{}----CMAE: ".format(num),CMAE[-1],"\n")
-    print("fold{}----SMAE: ".format(num),SMAE[-1],"\n")
+    print("fold{}----SMAE: ".format(num),100*SMAE[-1],"\n")
     print("fold{}----ED: ".format(num),ED[-1],"\n")
 
 
