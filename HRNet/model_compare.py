@@ -14,7 +14,8 @@ def main(args):
     keypoints = ['sc', 's1', 'fh1', 'fh2']
     metrics_dict = {}
     config_dict_list = []
-    save_dir = args.save_dir + '/'+ids[0]
+    now = datetime.datetime.now()
+    save_dir = args.save_dir + '/' + now.strftime("%m%d%H%M")
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
@@ -35,7 +36,15 @@ def main(args):
                 raise ValueError(f'logdir {test_logdir} does not have {metric}.txt')
             else:
                 print(f'test{id}/{metric}.txt found')
-                data = np.loadtxt(test_logdir+'/'+metric+'.txt')
+                data_with_nan = np.loadtxt(test_logdir+'/'+metric+'.txt')
+                isnan = np.isnan(data_with_nan)
+                if data_with_nan.ndim > 1:
+                    row_has_nan = np.any(isnan, axis=1)
+                    data = data_with_nan[~row_has_nan]
+                else:
+                    data = data_with_nan[~isnan]
+                # data = np.loadtxt(test_logdir+'/'+metric+'.txt')
+                # print(data.shape)
                 if data.ndim == 2:
                     if data.shape[1] == 3:
                         #get angle error
@@ -46,8 +55,7 @@ def main(args):
                         for i in range(data.shape[1]):
                             metrics_dict[id+'_'+keypoints[i]] = data[:,i]
                 else:
-                    #get CMAE, SMAE, ED
-                    metrics_dict[id+'_'+metric] = data[0]
+                    metrics_dict[id+'_'+metric] = data
     #print keys
     print(metrics_dict.keys())
     #plot angles with boxplot
@@ -55,7 +63,6 @@ def main(args):
     for angle in angles:
         ax[angles.index(angle)].boxplot([metrics_dict[id+'_'+angle] for id in ids], labels=ids,showfliers=False,showmeans=True,showbox=True,meanline=True,medianprops=dict(color='r'))
         ax[angles.index(angle)].set_title(angle)
-        #ax[angles.index(angle)].set_xticklabels(ids, rotation=45)
     fig.suptitle('Angle Error Boxplot')
     plt.tight_layout()
     plt.savefig(save_dir+'/angle_boxplot.png')
@@ -66,10 +73,19 @@ def main(args):
     for keypoint in keypoints:
         ax[keypoints.index(keypoint)].boxplot([metrics_dict[id+'_'+keypoint] for id in ids], labels=ids,showfliers=False,showmeans=True,showbox=True,meanline=True,medianprops=dict(color='r'))
         ax[keypoints.index(keypoint)].set_title(keypoint)
-        #ax[keypoints.index(keypoint)].set_xticklabels(ids, rotation=45)
     fig.suptitle('Error Boxplot')
     plt.tight_layout()
     plt.savefig(save_dir+'/error_boxplot.png')
+    if args.display:
+        plt.show()
+    fig, ax = plt.subplots(1,3,figsize=(20,5))
+    datacom=['CMAE', 'SMAE', 'ED']
+    for keypoint in datacom:
+        ax[datacom.index(keypoint)].boxplot([metrics_dict[id+'_'+keypoint] for id in ids], labels=ids,showfliers=False,showmeans=True,showbox=True,meanline=True,medianprops=dict(color='r'))
+        ax[datacom.index(keypoint)].set_title(keypoint)
+    fig.suptitle('Evaluation and comparison')
+    plt.tight_layout()
+    plt.savefig(save_dir+'/Evaluatio_Comparison.png')
     if args.display:
         plt.show()
 
@@ -95,10 +111,11 @@ def get_diff_config(config_dict_list):
 
 if __name__ == '__main__':
     import argparse
+    import datetime
     parser = argparse.ArgumentParser(
         description=__doc__)
-    parser.add_argument('--logdir', default='./save_weights/test', help='log directory')
-    parser.add_argument('--ids', default='64 60',help='model ids to compare')
+    parser.add_argument('--logdir', default='./save_weights/', help='log directory')
+    parser.add_argument('--ids', default='OURS FFCA HRNet',help='model ids to compare')
     parser.add_argument('--save_dir', default='./model_compare_results',help='metrics to compare')
     parser.add_argument('--metrics', default='angle_error error CMAE SMAE ED',help='metrics to compare')
     parser.add_argument('--display',default= False, help='display the results')
