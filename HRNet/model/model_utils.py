@@ -99,8 +99,8 @@ class StageModule(nn.Module):
                 branch  = nn.Sequential(
                     BasicBlock(w, w, use_rfca = False,  mix_c = mix_c),
                     BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
-                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
-                    #BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
+                    BasicBlock(w, w, use_rfca = False, mix_c = mix_c),
                 )
             else:
                 branch = nn.Sequential(
@@ -186,7 +186,7 @@ class PagFM(nn.Module):
         if my_fusion:
             self.conv_transpose = nn.ConvTranspose2d(low_channels, low_channels, kernel_size=2, stride=2)
             self.att = CA_module(high_channels,kernel_size=3,mix_c=mix_c)
-            self.conv = nn.Conv2d(high_channels*2,high_channels,kernel_size=1)
+            self.conv = nn.Conv2d(high_channels*3,high_channels,kernel_size=1)
             self.f_x = nn.Sequential(
                                     feature_gen(high_channels,high_channels,kernel_size=3,stride=1),
                                     BatchNorm(high_channels)
@@ -234,8 +234,8 @@ class PagFM(nn.Module):
         #upsample
         if self.my_fusion:
             #NOTE：For reproducibility,DO NOT use "Bilinear" interpolation
-            #y = nn.Upsample(size=[input_size[2], input_size[3]], mode='nearest')(y)
-            y = self.conv_transpose(y)
+            y = nn.Upsample(size=[input_size[2], input_size[3]], mode='bilinear')(y)
+            #y = self.conv_transpose(y)
             y_q = self.f_y(y)
         else:
             y_q = self.f_y(y)
@@ -254,7 +254,8 @@ class PagFM(nn.Module):
             sim_map = torch.sigmoid(torch.sum(x_k * y_q, dim=1).unsqueeze(1))
         if self.my_fusion:
             x = (sim_map)*x_k + (1-sim_map)*y_q
-            x = torch.cat((x,x_k),1)
+            x = torch.cat((y_q,x_k,x),1)
+            #x = x + x_k + y_q
             x = self.conv(x)
             x = self.att(x)
         else:
@@ -280,6 +281,9 @@ class myFFCA(nn.Module):
         self.high_channle = high_channel
         self.sigmoid = nn.Sigmoid()
         self.pag_fusion = pag_fusion
+        #self.outconv = nn.Sequential(
+            #nn.Conv2d(self.high_channle, self.high_channle,3,padding=1),
+        
        
         #process input branch
 
@@ -292,8 +296,8 @@ class myFFCA(nn.Module):
             self.inbranch_process = nn.Sequential(
                 #nn.ConvTranspose2d(self.low_channle,self.low_channle,kernel_size=4,stride=2,padding=1,bias=False),
                 #upsample, make lowchannel's H,W double and equals to highchannel's H,W
-                nn.Upsample(scale_factor=2.0, mode='nearest'),
-                
+                nn.Upsample(scale_factor=2.0, mode='bilinear', align_corners=False),
+                #nn.ConvTranspose2d(self.low_channle, self.low_channle, kernel_size=2, stride=2),
                 #3*3conv, make lowchannel's channel equals to highchannel's channel
                 nn.Conv2d(self.low_channle, self.high_channle,3,padding=1)
             )
@@ -330,6 +334,7 @@ class myFFCA(nn.Module):
                 weighted_branch = feature_weight * up_lowbranch
                 output_branch = torch.cat((weighted_branch, high_branch), 1)
                 output_branch = self.output(output_branch)
+        #output_branch = self.outconv(output_branch)
         return output_branch #output size should be (batch_size, high_channel, height, width)
 
 
@@ -502,10 +507,12 @@ class feature_gen(nn.Module):
     def forward(self,x):
         b,c = x.shape[0:2]
         generate_feature = self.generate(x)
-        h,w = generate_feature.shape[2:]
-        generate_feature = generate_feature.view(b,c,self.kernel_size**2,h,w)
+        if self.kernel_size != 1:
+            h,w = generate_feature.shape[2:]
+
+            generate_feature = generate_feature.view(b,c,self.kernel_size**2,h,w)
         
-        generate_feature = rearrange(generate_feature, 'b c (n1 n2) h w -> b c (h n1) (w n2)', n1=self.kernel_size,
+            generate_feature = rearrange(generate_feature, 'b c (n1 n2) h w -> b c (h n1) (w n2)', n1=self.kernel_size,
                               n2=self.kernel_size)
         generate_feature = self.conv1(generate_feature)
         return generate_feature

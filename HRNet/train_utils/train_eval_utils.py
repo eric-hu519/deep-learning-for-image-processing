@@ -37,7 +37,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             results = model(images)
             if use_aw:
-                losses = mse(results, targets,decay=decay,amp=amp)
+                losses, fore_loss = mse(results, targets,decay=decay,amp=amp)
             else:
                 losses = mse(results, targets)
 
@@ -48,6 +48,14 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         loss_value = losses_reduced.item()
         # 记录训练损失
         mloss = (mloss * i + loss_value) / (i + 1)  # update mean losses
+
+        fore_dict_reduced = utils.reduce_dict({"fore_loss": fore_loss})
+        fore_loss_reduced = sum(loss for loss in fore_dict_reduced.values())
+
+        fore_loss_value = fore_loss_reduced.item()
+
+        fore_loss = (fore_loss * i + fore_loss_value) / (i + 1)  # update mean losses
+        
 
         if not math.isfinite(loss_value):  # 当计算的损失为无穷大时停止训练
             print("Loss is {}, stopping training".format(loss_value))
@@ -71,7 +79,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         now_lr = optimizer.param_groups[0]["lr"]
         metric_logger.update(lr=now_lr)
 
-    return mloss, now_lr
+    return mloss, now_lr, fore_loss
 
 
 @torch.no_grad()
@@ -91,7 +99,7 @@ def eval_loss(model,  data_loader, device, epoch,
         with torch.cuda.amp.autocast(enabled=scaler is not None):
             results = model(images)
             if use_aw:
-                losses = mse(results, targets, decay = decay, amp = amp)
+                losses,_ = mse(results, targets, decay = decay, amp = amp)
             else:
                 losses = mse(results, targets)
 

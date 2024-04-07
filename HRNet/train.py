@@ -15,6 +15,9 @@ import wandb
 from train_utils import logutils
 
 import random
+# 计算参数量
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def create_model(num_joints, load_pretrain_weights=False, with_FFCA=True, 
                 skip_connection=True,
@@ -330,9 +333,9 @@ def train(num,
         config['sc_weight'] = 1
         config['fh1_weight'] = 1
         config['fh2_weight'] = 1
-        config['use_awloss'] = True  
+        config['use_awloss'] = True
         config['use_loss_decay'] = False
-        config['pag_fusion'] = True
+        config['pag_fusion'] = False
         config['my_fusion'] = True
     #convert config to args
     if isinstance(config['fixed-size'],list):
@@ -433,7 +436,8 @@ def train(num,
                          pag_fusion=run_config['pag_fusion'],
                          my_fusion=run_config['my_fusion'])
     # print(model)
-
+    num_params = count_parameters(model)
+    print(f'The model has {num_params} trainable parameters')
     model.to(device)
 
     # define optimizer
@@ -458,7 +462,7 @@ def train(num,
         if run_config['amp'] and "scaler" in checkpoint:
             scaler.load_state_dict(checkpoint["scaler"])
         print("the training process from epoch{}...".format(run_config['start-epoch']))
-
+    fore_loss_list = []
     train_loss = []
     learning_rate = []
     val_map = []
@@ -487,7 +491,7 @@ def train(num,
     val_loss = []
     best_err = np.zeros((4,))
     is_last_epoch = False
-    loss_gamma = 1e-2
+    loss_gamma = 1.5e-2
     decay = 1.0
     amp = 1.0
 #训练主函数
@@ -497,12 +501,12 @@ def train(num,
         if epoch == 0:
             decay = 1.0
             amp = 1.0
-        elif (min(train_loss) == train_loss[-1]) and run_config['use_loss_decay']:
-            decay = decay*(1-loss_gamma)
+        elif (min(fore_loss_list) == fore_loss_list[-1]) and run_config['use_loss_decay']:
+            #decay = decay*(1-loss_gamma)
             amp = amp*(1+loss_gamma)
-        print("decay: ",decay,"\n","amp: ",amp,"\n")
+        print("amp: ",amp,"\n")
 
-        mean_loss, lr = utils.train_one_epoch(model, optimizer, train_data_loader,
+        mean_loss, lr, fore_loss = utils.train_one_epoch(model, optimizer, train_data_loader,
                                               device=device, epoch=epoch,
                                               print_freq=50, warmup=True,
                                               scaler=scaler, use_aw=run_config['use_awloss'],
@@ -511,6 +515,7 @@ def train(num,
         learning_rate.append(lr)
         amp_rate.append(amp)
         decay_rate.append(decay)
+        fore_loss_list.append(fore_loss.item())
 
         # update the learning rate
         lr_scheduler.step()

@@ -80,13 +80,20 @@ class AW_loss(object):
         #利用stack将每张图片的Heatmap和target进行堆叠
         #print("targets:",targets
         heatmaps = torch.stack([t["heatmap"].to(device) for t in targets])
+        forepixel = (heatmaps.gt(0) & heatmaps.le(1)).float()
+        #only consider fore pixel value
+        forepixel = forepixel * torch.pow(heatmaps,amp)
+        logits_fore = logits * forepixel
+
+        diff_fore = abs(logits_fore-forepixel)
+        diff_fore = torch.sum(diff_fore) / bs
         # [num_kps] -> [B, num_kps]
         #kps_weights = torch.stack([t["kps_weights"].to(device) for t in targets])
                 # [B, num_kps, H, W] -> [B, num_kps]
         #logits为网络预测的Heatmap，heatmap为网格法计算的Heatmap
         diff_map = abs(logits-heatmaps)
         loss = 0 
-        loss = torch.where(diff_map >= (self.theta*decay), self.linear_part(logits,torch.pow(heatmaps,amp)), self.nonlinear_part(logits,torch.pow(heatmaps,amp)))
+        loss = torch.where(diff_map >= (self.theta**amp), self.linear_part(logits,torch.pow(heatmaps,amp)), self.nonlinear_part(logits,torch.pow(heatmaps,amp)))
         loss = torch.sum(loss) / bs
-        return loss
+        return loss, diff_fore
    
