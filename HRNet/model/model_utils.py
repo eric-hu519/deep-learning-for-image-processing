@@ -184,14 +184,19 @@ class PagFM(nn.Module):
     
 
         if my_fusion:
-            self.conv_transpose = nn.ConvTranspose2d(low_channels, low_channels, kernel_size=2, stride=2)
-            self.att = CA_module(high_channels,kernel_size=3,mix_c=mix_c)
-            self.conv = nn.Conv2d(high_channels*3,high_channels,kernel_size=1)
+            #self.conv_transpose = nn.ConvTranspose2d(low_channels, low_channels, kernel_size=2, stride=2)
+            #self.att = CA_module(high_channels,kernel_size=3,mix_c=mix_c)
+            #self.conv = nn.Conv2d(high_channels*3,high_channels,kernel_size=1)
+            self.conv = RFCAConv(high_channels*3, high_channels,3,1,mix_c=mix_c)
             self.f_x = nn.Sequential(
-                                    feature_gen(high_channels,high_channels,kernel_size=3,stride=1),
+                                    #feature_gen(high_channels,high_channels,kernel_size=3,stride=1),
+                                    nn.Conv2d(high_channels, high_channels, 
+                                              kernel_size=1, bias=False),
                                     BatchNorm(high_channels)
                                     )
             self.f_y = nn.Sequential(
+                                    nn.Conv2d(high_channels, high_channels, 
+                                              kernel_size=1, bias=False),
                                     feature_gen(low_channels,high_channels,kernel_size=3,stride=1),
                                     
                                     BatchNorm(high_channels)
@@ -254,10 +259,11 @@ class PagFM(nn.Module):
             sim_map = torch.sigmoid(torch.sum(x_k * y_q, dim=1).unsqueeze(1))
         if self.my_fusion:
             x = (sim_map)*x_k + (1-sim_map)*y_q
+            #change the concat order
             x = torch.cat((y_q,x_k,x),1)
             #x = x + x_k + y_q
             x = self.conv(x)
-            x = self.att(x)
+            #x = self.att(x)
         else:
             y = F.interpolate(y, size=[input_size[2], input_size[3]],
                                 mode='nearest', align_corners=False)
